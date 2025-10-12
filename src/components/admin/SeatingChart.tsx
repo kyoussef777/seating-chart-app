@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useDrop } from 'react-dnd';
-import { Plus, Edit, Trash2, Users, Grid, ZoomIn, ZoomOut, RotateCcw, Move } from 'lucide-react';
+import { Plus, Edit, Trash2, Users, Grid, ZoomIn, ZoomOut, RotateCcw, Move, Shuffle, Search } from 'lucide-react';
 import { useTheme } from '@/hooks/useTheme';
 import DraggableTable from './DraggableTable';
 import DraggableGuest from './DraggableGuest';
@@ -14,6 +14,7 @@ interface Table {
   capacity: number;
   positionX: number;
   positionY: number;
+  rotation: number;
   guests: Guest[];
 }
 
@@ -22,6 +23,7 @@ interface Guest {
   name: string;
   phoneNumber: string | null;
   address: string | null;
+  partySize: number;
   tableId: string | null;
 }
 
@@ -29,12 +31,37 @@ export default function SeatingChart() {
   const themeConfig = useTheme();
   const [tables, setTables] = useState<Table[]>([]);
   const [unassignedGuests, setUnassignedGuests] = useState<Guest[]>([]);
+  const [filteredGuests, setFilteredGuests] = useState<Guest[]>([]);
+  const [guestSearchTerm, setGuestSearchTerm] = useState('');
   const [showAddTable, setShowAddTable] = useState(false);
+  const [showBulkAssign, setShowBulkAssign] = useState(false);
   const [newTable, setNewTable] = useState({
     name: '',
     shape: 'round',
     capacity: 8,
   });
+
+  const getDefaultCapacity = (shape: string) => {
+    const defaults: { [key: string]: number } = {
+      round: 8,
+      rectangular: 10,
+      square: 6,
+      oval: 12,
+      'u-shape': 16,
+      cocktail: 4,
+    };
+    return defaults[shape] || 8;
+  };
+
+  // Helper function to calculate seats used by guests (accounting for party size)
+  const getSeatsUsed = (guests: Guest[]) => {
+    return guests.reduce((total, guest) => total + (guest.partySize || 1), 0);
+  };
+
+  // Helper function to get available seats at a table
+  const getAvailableSeats = (table: Table) => {
+    return table.capacity - getSeatsUsed(table.guests);
+  };
   const [loading, setLoading] = useState(true);
   const [zoomLevel, setZoomLevel] = useState(0.7);
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
@@ -64,36 +91,110 @@ export default function SeatingChart() {
   }));
 
   useEffect(() => {
-    fetchTables();
-    fetchGuests();
+    fetchTablesAndGuests();
   }, []);
 
-  const fetchTables = async () => {
-    try {
-      const response = await fetch('/api/tables');
-      const data = await response.json();
-      if (response.ok) {
-        setTables(data.tables);
-      }
-    } catch (error) {
-      console.error('Failed to fetch tables:', error);
-    } finally {
-      setLoading(false);
+  useEffect(() => {
+    if (guestSearchTerm.trim()) {
+      setFilteredGuests(
+        unassignedGuests.filter(guest =>
+          guest.name.toLowerCase().includes(guestSearchTerm.toLowerCase())
+        )
+      );
+    } else {
+      setFilteredGuests(unassignedGuests);
     }
-  };
+  }, [unassignedGuests, guestSearchTerm]);
 
-  const fetchGuests = async () => {
+  const fetchTablesAndGuests = useCallback(async () => {
     try {
-      const response = await fetch('/api/guests');
-      const data = await response.json();
-      if (response.ok) {
-        const unassigned = data.guests.filter((guest: Guest) => !guest.tableId);
+      // Fetch both tables and guests in parallel
+      const [tablesResponse, guestsResponse] = await Promise.all([
+        fetch('/api/tables'),
+        fetch('/api/guests')
+      ]);
+
+      const [tablesData, guestsData] = await Promise.all([
+        tablesResponse.json(),
+        guestsResponse.json()
+      ]);
+
+      if (tablesResponse.ok && guestsResponse.ok) {
+        // Group guests by table
+        const guestsByTable: { [key: string]: Guest[] } = {};
+        const unassigned: Guest[] = [];
+
+        guestsData.guests.forEach((guest: Guest) => {
+          if (guest.tableId) {
+            if (!guestsByTable[guest.tableId]) {
+              guestsByTable[guest.tableId] = [];
+            }
+            guestsByTable[guest.tableId].push(guest);
+          } else {
+            unassigned.push(guest);
+          }
+        });
+
+        // Attach guests to tables
+        const tablesWithGuests = tablesData.tables.map((table: Table) => ({
+          ...table,
+          rotation: table.rotation || 0, // Ensure rotation defaults to 0
+          guests: guestsByTable[table.id] || []
+        }));
+
+        setTables(tablesWithGuests);
         setUnassignedGuests(unassigned);
       }
     } catch (error) {
-      console.error('Failed to fetch guests:', error);
+      console.error('Failed to fetch data:', error);
+    } finally {
+      setLoading(false);
     }
-  };
+  }, []);
+
+  const refreshData = useCallback(async () => {
+    // Re-fetch all data to ensure consistency
+    try {
+      const [tablesResponse, guestsResponse] = await Promise.all([
+        fetch('/api/tables'),
+        fetch('/api/guests')
+      ]);
+
+      const [tablesData, guestsData] = await Promise.all([
+        tablesResponse.json(),
+        guestsResponse.json()
+      ]);
+
+      if (tablesResponse.ok && guestsResponse.ok) {
+        // Group guests by table
+        const guestsByTable: { [key: string]: Guest[] } = {};
+        const unassigned: Guest[] = [];
+
+        guestsData.guests.forEach((guest: Guest) => {
+          if (guest.tableId) {
+            if (!guestsByTable[guest.tableId]) {
+              guestsByTable[guest.tableId] = [];
+            }
+            guestsByTable[guest.tableId].push(guest);
+          } else {
+            unassigned.push(guest);
+          }
+        });
+
+        // Attach guests to tables
+        const tablesWithGuests = tablesData.tables.map((table: Table) => ({
+          ...table,
+          rotation: table.rotation || 0, // Ensure rotation defaults to 0
+          guests: guestsByTable[table.id] || []
+        }));
+
+        setTables(tablesWithGuests);
+        setUnassignedGuests(unassigned);
+      }
+    } catch (error) {
+      console.error('Failed to refresh data:', error);
+    }
+  }, []);
 
   const handleAddTable = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -109,6 +210,7 @@ export default function SeatingChart() {
           ...newTable,
           positionX: Math.random() * 400 + 50,
           positionY: Math.random() * 300 + 50,
+          rotation: 0,
         }),
       });
 
@@ -247,14 +349,28 @@ export default function SeatingChart() {
 
       if (response.ok) {
         setTables(prev => prev.filter(t => t.id !== tableId));
-        await fetchGuests(); // Refresh unassigned guests
+        await refreshData(); // Refresh all data
       }
     } catch (error) {
       console.error('Failed to delete table:', error);
     }
   };
 
-  const handleAssignGuest = async (guestId: string, tableId: string) => {
+  const handleAssignGuest = useCallback(async (guestId: string, tableId: string) => {
+    const guest = unassignedGuests.find(g => g.id === guestId);
+    const table = tables.find(t => t.id === tableId);
+
+    if (!guest || !table) return;
+
+    // Check if there's enough capacity for this party
+    const availableSeats = getAvailableSeats(table);
+    const partySize = guest.partySize || 1;
+
+    if (availableSeats < partySize) {
+      alert(`Not enough space! This party needs ${partySize} seats but only ${availableSeats} are available.`);
+      return;
+    }
+
     try {
       const response = await fetch('/api/guests', {
         method: 'PUT',
@@ -269,24 +385,25 @@ export default function SeatingChart() {
 
       if (response.ok) {
         // Move guest from unassigned to the table
-        const guest = unassignedGuests.find(g => g.id === guestId);
-        if (guest) {
-          setUnassignedGuests(prev => prev.filter(g => g.id !== guestId));
-          setTables(prev =>
-            prev.map(table =>
-              table.id === tableId
-                ? { ...table, guests: [...table.guests, { ...guest, tableId }] }
-                : table
-            )
-          );
-        }
+        setUnassignedGuests(prev => prev.filter(g => g.id !== guestId));
+        setTables(prev =>
+          prev.map(t =>
+            t.id === tableId
+              ? { ...t, guests: [...t.guests, { ...guest, tableId }] }
+              : t
+          )
+        );
+        // Refresh data to ensure consistency
+        setTimeout(refreshData, 200);
       }
     } catch (error) {
       console.error('Failed to assign guest:', error);
+      // Refresh on error to get correct state
+      setTimeout(refreshData, 200);
     }
-  };
+  }, [unassignedGuests, tables, refreshData]);
 
-  const handleUnassignGuest = async (guestId: string) => {
+  const handleUnassignGuest = useCallback(async (guestId: string) => {
     try {
       const response = await fetch('/api/guests', {
         method: 'PUT',
@@ -316,17 +433,170 @@ export default function SeatingChart() {
         if (removedGuest) {
           setUnassignedGuests(prev => [...prev, removedGuest!]);
         }
+        // Refresh data to ensure consistency
+        setTimeout(refreshData, 200);
       }
     } catch (error) {
       console.error('Failed to unassign guest:', error);
+      // Refresh on error to get correct state
+      setTimeout(refreshData, 200);
     }
-  };
+  }, [refreshData]);
+
+  const handleRotateTable = useCallback(async (tableId: string, rotation: number) => {
+    const table = tables.find(t => t.id === tableId);
+    if (!table) return;
+
+    // Optimistically update state first
+    setTables(prev =>
+      prev.map(t =>
+        t.id === tableId
+          ? { ...t, rotation }
+          : t
+      )
+    );
+
+    try {
+      const response = await fetch('/api/tables', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          id: tableId,
+          rotation,
+        }),
+      });
+
+      if (!response.ok) {
+        // Revert on error
+        setTables(prev =>
+          prev.map(t =>
+            t.id === tableId
+              ? { ...t, rotation: table.rotation || 0 }
+              : t
+          )
+        );
+      }
+    } catch (error) {
+      console.error('Failed to rotate table:', error);
+      // Revert on error
+      setTables(prev =>
+        prev.map(t =>
+          t.id === tableId
+            ? { ...t, rotation: table.rotation || 0 }
+            : t
+        )
+      );
+    }
+  }, [tables]);
+
+  const handleAutoArrange = useCallback(() => {
+    if (tables.length === 0) return;
+
+    const canvasWidth = 800;
+    const canvasHeight = 600;
+    const tableSpacing = 180;
+    const centerX = canvasWidth / 2;
+    const centerY = canvasHeight / 2;
+
+    let arrangedTables;
+
+    if (tables.length === 1) {
+      // Single table in center
+      arrangedTables = [{
+        ...tables[0],
+        positionX: centerX - 50,
+        positionY: centerY - 50
+      }];
+    } else {
+      // Arrange in circle around center
+      const radius = Math.min(canvasWidth, canvasHeight) * 0.3;
+      arrangedTables = tables.map((table, index) => {
+        const angle = (index * 2 * Math.PI) / tables.length;
+        return {
+          ...table,
+          positionX: centerX + radius * Math.cos(angle) - 50,
+          positionY: centerY + radius * Math.sin(angle) - 50
+        };
+      });
+    }
+
+    setTables(arrangedTables);
+
+    // Update positions on server
+    arrangedTables.forEach(async (table) => {
+      try {
+        await fetch('/api/tables', {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            id: table.id,
+            positionX: table.positionX,
+            positionY: table.positionY,
+          }),
+        });
+      } catch (error) {
+        console.error('Failed to update table position:', error);
+      }
+    });
+  }, [tables]);
+
+  const handleBulkAssign = useCallback(async () => {
+    if (unassignedGuests.length === 0 || tables.length === 0) return;
+
+    const updatedTables = [...tables];
+    let guestIndex = 0;
+
+    // Auto-assign guests to tables with available capacity (accounting for party size)
+    for (const table of updatedTables) {
+      let availableSeats = getAvailableSeats(table);
+
+      while (guestIndex < unassignedGuests.length && availableSeats > 0) {
+        const guest = unassignedGuests[guestIndex];
+        const partySize = guest.partySize || 1;
+
+        // Only assign if the party fits
+        if (partySize <= availableSeats) {
+          try {
+            const response = await fetch('/api/guests', {
+              method: 'PUT',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                id: guest.id,
+                tableId: table.id,
+              }),
+            });
+
+            if (response.ok) {
+              table.guests.push({ ...guest, tableId: table.id });
+              availableSeats -= partySize;
+            }
+          } catch (error) {
+            console.error('Failed to assign guest:', error);
+          }
+        }
+
+        guestIndex++;
+      }
+
+      if (guestIndex >= unassignedGuests.length) break;
+    }
+
+    // Refresh data to ensure consistency
+    setTimeout(refreshData, 200);
+    setShowBulkAssign(false);
+  }, [tables, unassignedGuests, refreshData]);
 
   if (loading) {
     return (
       <div className="text-center py-12">
-        <div className="w-8 h-8 border-4 border-yellow-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-        <p className="text-black">Loading seating chart...</p>
+        <div className={`w-8 h-8 border-4 border-t-transparent rounded-full animate-spin mx-auto mb-4 ${themeConfig.classes.borderPrimary}`} />
+        <p className={themeConfig.text.body}>Loading seating chart...</p>
       </div>
     );
   }
@@ -335,32 +605,70 @@ export default function SeatingChart() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold text-gray-900">Seating Chart</h2>
-        <button
-          onClick={() => setShowAddTable(true)}
-          className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${themeConfig.button.primary}`}
-        >
-          <Plus className="w-4 h-4" />
-          Add Table
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={handleAutoArrange}
+            disabled={tables.length === 0}
+            className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${themeConfig.button.secondary} disabled:opacity-50 disabled:cursor-not-allowed`}
+            title="Auto-arrange tables"
+          >
+            <Shuffle className="w-4 h-4" />
+            Auto Arrange
+          </button>
+          <button
+            onClick={() => setShowBulkAssign(true)}
+            disabled={unassignedGuests.length === 0 || tables.length === 0}
+            className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg transition-colors ${themeConfig.button.secondary} disabled:opacity-50 disabled:cursor-not-allowed`}
+            title="Bulk assign guests"
+          >
+            <Users className="w-4 h-4" />
+            Bulk Assign
+          </button>
+          <button
+            onClick={() => setShowAddTable(true)}
+            className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${themeConfig.button.primary}`}
+          >
+            <Plus className="w-4 h-4" />
+            Add Table
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Unassigned Guests */}
         <div className="lg:col-span-1 bg-white rounded-lg shadow p-4">
-          <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+          <h3 className="font-semibold text-black mb-4 flex items-center gap-2">
             <Users className="w-5 h-5" />
             Unassigned Guests ({unassignedGuests.length})
           </h3>
+
+          {/* Search Input */}
+          <div className="mb-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <input
+                type="text"
+                placeholder="Search guests..."
+                value={guestSearchTerm}
+                onChange={(e) => setGuestSearchTerm(e.target.value)}
+                className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent text-black"
+              />
+            </div>
+          </div>
+
           <div className="space-y-2 max-h-96 overflow-y-auto">
-            {unassignedGuests.map((guest) => (
+            {filteredGuests.map((guest) => (
               <DraggableGuest
                 key={guest.id}
                 guest={guest}
                 onUnassign={() => handleUnassignGuest(guest.id)}
               />
             ))}
+            {filteredGuests.length === 0 && unassignedGuests.length > 0 && (
+              <p className="text-black text-sm">No guests found matching "{guestSearchTerm}"</p>
+            )}
             {unassignedGuests.length === 0 && (
-              <p className="text-gray-500 text-sm">All guests are assigned!</p>
+              <p className="text-black text-sm">All guests are assigned!</p>
             )}
           </div>
         </div>
@@ -377,7 +685,7 @@ export default function SeatingChart() {
               <ZoomOut className="w-4 h-4" />
               <span className="text-sm">-</span>
             </button>
-            <span className="text-sm font-medium text-gray-600 min-w-[3rem] text-center">
+            <span className="text-sm font-medium text-black min-w-[3rem] text-center">
               {Math.round(zoomLevel * 100)}%
             </span>
             <button
@@ -396,7 +704,7 @@ export default function SeatingChart() {
               <RotateCcw className="w-4 h-4" />
               <span className="text-sm">Reset</span>
             </button>
-            <div className="flex items-center gap-1 text-sm text-gray-500 ml-4">
+            <div className="flex items-center gap-1 text-sm text-black ml-4">
               <Move className="w-4 h-4" />
               <span>Ctrl+scroll to zoom, middle-click to pan</span>
             </div>
@@ -431,10 +739,11 @@ export default function SeatingChart() {
                   onDelete={() => handleDeleteTable(table.id)}
                   onAssignGuest={handleAssignGuest}
                   onUnassignGuest={handleUnassignGuest}
+                  onRotate={handleRotateTable}
                 />
               ))}
               {tables.length === 0 && (
-                <div className="absolute inset-0 flex items-center justify-center text-gray-500">
+                <div className="absolute inset-0 flex items-center justify-center text-black">
                   <div className="text-center">
                     <Grid className="w-12 h-12 mx-auto mb-4 opacity-50" />
                     <p>No tables yet. Click "Add Table" to get started.</p>
@@ -472,11 +781,22 @@ export default function SeatingChart() {
                 </label>
                 <select
                   value={newTable.shape}
-                  onChange={(e) => setNewTable({ ...newTable, shape: e.target.value })}
+                  onChange={(e) => {
+                    const newShape = e.target.value;
+                    setNewTable({
+                      ...newTable,
+                      shape: newShape,
+                      capacity: getDefaultCapacity(newShape)
+                    });
+                  }}
                   className={`w-full px-3 py-2 rounded-lg ${themeConfig.input}`}
                 >
-                  <option value="round">Round</option>
-                  <option value="rectangular">Rectangular</option>
+                  <option value="round">Round Table</option>
+                  <option value="rectangular">Rectangular Table</option>
+                  <option value="square">Square Table</option>
+                  <option value="oval">Oval Table</option>
+                  <option value="u-shape">U-Shape Table</option>
+                  <option value="cocktail">Cocktail Table</option>
                 </select>
               </div>
 
@@ -511,6 +831,49 @@ export default function SeatingChart() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Assignment Modal */}
+      {showBulkAssign && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <h3 className="text-lg font-semibold mb-4 text-black">Bulk Assign Guests</h3>
+            <div className="space-y-4">
+              <p className="text-sm text-black">
+                This will automatically assign {unassignedGuests.length} unassigned guests to available tables based on capacity.
+              </p>
+              <div className="space-y-2">
+                {tables.map(table => {
+                  const seatsUsed = getSeatsUsed(table.guests);
+                  const availableSeats = table.capacity - seatsUsed;
+                  return (
+                    <div key={table.id} className="flex justify-between text-sm text-black">
+                      <span className="font-medium">{table.name}</span>
+                      <span className={availableSeats > 0 ? 'text-green-600' : 'text-red-600'}>
+                        {availableSeats > 0 ? `${availableSeats}/${table.capacity} seats available` : 'Full'}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="flex gap-3 pt-4">
+                <button
+                  onClick={handleBulkAssign}
+                  className={`flex-1 py-2 px-4 rounded-lg transition-colors ${themeConfig.button.primary}`}
+                >
+                  Assign Guests
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowBulkAssign(false)}
+                  className={`px-4 py-2 rounded-lg transition-colors ${themeConfig.button.secondary}`}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

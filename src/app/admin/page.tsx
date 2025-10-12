@@ -70,7 +70,7 @@ export default function AdminPage() {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="w-8 h-8 border-4 border-yellow-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-gray-600">Loading admin panel...</p>
+          <p className="text-black">Loading admin panel...</p>
         </div>
       </div>
     );
@@ -97,8 +97,8 @@ export default function AdminPage() {
                   <Heart className="w-5 h-5 text-white fill-current" />
                 </div>
                 <div>
-                  <h1 className="text-xl font-bold text-gray-900">Event Admin</h1>
-                  <p className="text-sm text-gray-600">Welcome, {user.username}</p>
+                  <h1 className="text-xl font-bold text-black">Event Admin</h1>
+                  <p className="text-sm text-black">Welcome, {user.username}</p>
                 </div>
               </div>
 
@@ -107,13 +107,13 @@ export default function AdminPage() {
                   href="/"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="px-3 py-2 text-sm font-medium text-gray-700 hover:text-amber-600 transition-colors"
+                  className="px-3 py-2 text-sm font-medium text-black hover:text-amber-600 transition-colors"
                 >
                   View Guest Portal
                 </a>
                 <button
                   onClick={handleLogout}
-                  className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 hover:text-amber-600 transition-colors"
+                  className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-black hover:text-amber-600 transition-colors"
                 >
                   <LogOut className="w-4 h-4" />
                   Logout
@@ -131,7 +131,7 @@ export default function AdminPage() {
                     className={`flex items-center gap-2 py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
                       activeTab === tab.id
                         ? 'border-yellow-500 text-amber-600'
-                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                        : 'border-transparent text-black hover:text-amber-600 hover:border-gray-300'
                     }`}
                   >
                     <Icon className="w-4 h-4" />

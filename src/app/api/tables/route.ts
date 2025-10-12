@@ -27,7 +27,7 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     await requireAuth();
-    const { name, shape, capacity, positionX, positionY } = await request.json();
+    const { name, shape, capacity, positionX, positionY, rotation } = await request.json();
 
     if (!name || !shape || !capacity) {
       return NextResponse.json(
@@ -42,6 +42,7 @@ export async function POST(request: NextRequest) {
       capacity: parseInt(capacity),
       positionX: positionX || 0,
       positionY: positionY || 0,
+      rotation: rotation || 0,
     }).returning();
 
     return NextResponse.json({ table: { ...table, guests: [] } });
@@ -60,7 +61,7 @@ export async function POST(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   try {
     await requireAuth();
-    const { id, name, shape, capacity, positionX, positionY } = await request.json();
+    const { id, name, shape, capacity, positionX, positionY, rotation } = await request.json();
 
     if (!id) {
       return NextResponse.json(
@@ -77,6 +78,7 @@ export async function PUT(request: NextRequest) {
         capacity: capacity ? parseInt(capacity) : undefined,
         positionX: positionX !== undefined ? positionX : undefined,
         positionY: positionY !== undefined ? positionY : undefined,
+        rotation: rotation !== undefined ? rotation : undefined,
       })
       .where(eq(tables.id, id))
       .returning();

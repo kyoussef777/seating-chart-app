@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Upload, Plus, Search, Edit, Trash2, User, Phone, MapPin } from 'lucide-react';
+import { Upload, Plus, Search, Edit, Trash2, User, Phone, MapPin, Users } from 'lucide-react';
 import { useTheme } from '@/hooks/useTheme';
 
 interface Guest {
@@ -9,6 +9,7 @@ interface Guest {
   name: string;
   phoneNumber: string | null;
   address: string | null;
+  partySize: number;
   tableId: string | null;
 }
 
@@ -33,6 +34,7 @@ export default function GuestList() {
     name: '',
     phoneNumber: '',
     address: '',
+    partySize: 1,
     tableId: '',
   });
 
@@ -95,6 +97,7 @@ export default function GuestList() {
           name: newGuest.name.trim(),
           phoneNumber: newGuest.phoneNumber.trim() || null,
           address: newGuest.address.trim() || null,
+          partySize: newGuest.partySize || 1,
           tableId: newGuest.tableId || null,
         }),
       });
@@ -102,7 +105,7 @@ export default function GuestList() {
       const data = await response.json();
       if (response.ok) {
         setGuests(prev => [...prev, data.guest]);
-        setNewGuest({ name: '', phoneNumber: '', address: '', tableId: '' });
+        setNewGuest({ name: '', phoneNumber: '', address: '', partySize: 1, tableId: '' });
         setShowAddGuest(false);
       }
     } catch (error) {
@@ -125,6 +128,7 @@ export default function GuestList() {
           name: editingGuest.name.trim(),
           phoneNumber: editingGuest.phoneNumber?.trim() || null,
           address: editingGuest.address?.trim() || null,
+          partySize: editingGuest.partySize || 1,
           tableId: editingGuest.tableId || null,
         }),
       });
@@ -261,6 +265,12 @@ export default function GuestList() {
                   <div className="flex items-center gap-3 mb-2">
                     <User className="w-5 h-5 text-gray-400" />
                     <h4 className={`text-lg font-medium ${text.body}`}>{guest.name}</h4>
+                    {guest.partySize > 1 && (
+                      <span className="text-xs bg-amber-200 text-amber-800 px-2 py-1 rounded-full flex items-center gap-1">
+                        <Users className="w-3 h-3" />
+                        {guest.partySize}
+                      </span>
+                    )}
                     <span className={`px-2 py-1 text-xs rounded-full ${
                       guest.tableId
                         ? 'bg-green-100 text-green-800'
@@ -353,6 +363,21 @@ export default function GuestList() {
 
               <div>
                 <label className={`block ${text.label} mb-1`}>
+                  Party Size *
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  max="10"
+                  value={newGuest.partySize}
+                  onChange={(e) => setNewGuest({ ...newGuest, partySize: parseInt(e.target.value) || 1 })}
+                  className={input}
+                  required
+                />
+              </div>
+
+              <div>
+                <label className={`block ${text.label} mb-1`}>
                   Assign to Table
                 </label>
                 <select
@@ -428,6 +453,21 @@ export default function GuestList() {
                   value={editingGuest.address || ''}
                   onChange={(e) => setEditingGuest({ ...editingGuest, address: e.target.value })}
                   className={`${input} h-20`}
+                />
+              </div>
+
+              <div>
+                <label className={`block ${text.label} mb-1`}>
+                  Party Size *
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  max="10"
+                  value={editingGuest.partySize}
+                  onChange={(e) => setEditingGuest({ ...editingGuest, partySize: parseInt(e.target.value) || 1 })}
+                  className={input}
+                  required
                 />
               </div>
 

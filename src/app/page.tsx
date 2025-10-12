@@ -1,8 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Search, MapPin, Heart, Settings, Edit3 } from 'lucide-react';
-import Link from 'next/link';
+import { Search, MapPin, Heart, Edit3 } from 'lucide-react';
 import { useTheme } from '@/hooks/useTheme';
 
 interface Guest {
@@ -40,8 +39,8 @@ export default function HomePage() {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(-1);
   const [settings, setSettings] = useState<EventSettings>({
-    eventName: 'Our Special Day',
-    homePageText: 'Welcome to our wedding! Please find your table below.'
+    eventName: "Mira & Kamal's Engagement",
+    homePageText: 'Welcome to our engagement! Please find your table below.'
   });
 
   useEffect(() => {
@@ -295,16 +294,16 @@ export default function HomePage() {
             <button
               type="submit"
               disabled={isSearching}
-              className={`w-full ${themeConfig.button.primary} flex items-center justify-center gap-2`}
+              className={`w-full ${themeConfig.button.primary} flex items-center justify-center gap-2 text-white`}
             >
               {isSearching ? (
                 <>
-                  <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" />
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                   Searching...
                 </>
               ) : (
                 <>
-                  <Search className="w-4 h-4" />
+                  <Search className="w-4 h-4 text-white" />
                   Find My Table
                 </>
               )}
@@ -321,15 +320,11 @@ export default function HomePage() {
             </h2>
 
             {guestTable ? (
-              <div className="bg-gradient-to-r from-yellow-50 to-amber-50 rounded-lg p-4 border border-rose-200">
-                <h3 className="font-semibold text-black text-lg mb-2">Your Table Assignment</h3>
-                <div className="flex items-center gap-4">
-                  <div className="bg-white rounded-lg px-4 py-2 border border-yellow-400">
-                    <span className="text-2xl font-bold text-amber-700">{guestTable.name}</span>
-                  </div>
-                  <div className="text-gray-600">
-                    <p className="capitalize">{guestTable.shape} table</p>
-                    <p>{guestTable.capacity} seats</p>
+              <div className="bg-gradient-to-r from-yellow-50 to-amber-50 rounded-lg p-6 border border-yellow-200">
+                <h3 className="font-semibold text-black text-lg mb-4 text-center">Your Table Assignment</h3>
+                <div className="flex justify-center">
+                  <div className="bg-white rounded-lg px-8 py-4 border-2 border-yellow-400 shadow-md">
+                    <span className="text-3xl font-bold text-amber-700">{guestTable.name}</span>
                   </div>
                 </div>
               </div>
@@ -384,16 +379,6 @@ export default function HomePage() {
           </div>
         )}
 
-        {/* Admin Link */}
-        <div className="text-center">
-          <Link
-            href="/admin/login"
-            className="inline-flex items-center gap-2 text-gray-500 hover:text-amber-600 text-sm transition-colors"
-          >
-            <Settings className="w-4 h-4" />
-            Admin Access
-          </Link>
-        </div>
       </div>
     </div>
   );

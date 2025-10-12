@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     await requireAuth();
-    const { name, phoneNumber, address, tableId } = await request.json();
+    const { name, phoneNumber, address, tableId, partySize } = await request.json();
 
     if (!name) {
       return NextResponse.json(
@@ -46,6 +46,7 @@ export async function POST(request: NextRequest) {
       phoneNumber: phoneNumber || null,
       address: address || null,
       tableId: tableId || null,
+      partySize: partySize || 1,
     }).returning();
 
     return NextResponse.json({ guest });
@@ -63,7 +64,7 @@ export async function POST(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
-    const { id, name, phoneNumber, address, tableId, requiresAuth = true } = await request.json();
+    const { id, name, phoneNumber, address, tableId, partySize, requiresAuth = true } = await request.json();
 
     if (requiresAuth) {
       await requireAuth();
@@ -81,6 +82,7 @@ export async function PUT(request: NextRequest) {
     if (phoneNumber !== undefined) updateData.phoneNumber = phoneNumber;
     if (address !== undefined) updateData.address = address;
     if (tableId !== undefined) updateData.tableId = tableId;
+    if (partySize !== undefined) updateData.partySize = partySize;
     updateData.updatedAt = new Date();
 
     const [updatedGuest] = await db

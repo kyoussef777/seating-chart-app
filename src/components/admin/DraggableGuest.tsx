@@ -1,13 +1,14 @@
 'use client';
 
 import { useDrag } from 'react-dnd';
-import { User, X } from 'lucide-react';
+import { User, X, Users } from 'lucide-react';
 
 interface Guest {
   id: string;
   name: string;
   phoneNumber: string | null;
   address: string | null;
+  partySize: number;
   tableId: string | null;
 }
 
@@ -40,14 +41,22 @@ export default function DraggableGuest({
       `}
     >
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2 min-w-0">
-          <User className="w-4 h-4 text-gray-400 flex-shrink-0" />
-          <div className="min-w-0">
-            <p className="text-sm font-medium text-gray-900 truncate">
-              {guest.name}
-            </p>
+        <div className="flex items-center gap-2 min-w-0 flex-1">
+          <User className="w-4 h-4 text-black flex-shrink-0" />
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <p className="text-sm font-medium text-black truncate">
+                {guest.name}
+              </p>
+              {guest.partySize > 1 && (
+                <span className="text-xs bg-amber-200 text-amber-800 px-1.5 py-0.5 rounded-full flex-shrink-0 flex items-center gap-0.5">
+                  <Users className="w-2.5 h-2.5" />
+                  {guest.partySize}
+                </span>
+              )}
+            </div>
             {guest.phoneNumber && (
-              <p className="text-xs text-gray-500 truncate">
+              <p className="text-xs text-black truncate">
                 {guest.phoneNumber}
               </p>
             )}

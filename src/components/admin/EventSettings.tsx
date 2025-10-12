@@ -73,7 +73,7 @@ export default function EventSettings() {
     return (
       <div className="text-center py-12">
         <div className="w-8 h-8 border-4 border-rose-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-        <p className="text-gray-600">Loading event settings...</p>
+        <p className="text-black">Loading event settings...</p>
       </div>
     );
   }
@@ -81,7 +81,7 @@ export default function EventSettings() {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-gray-900">Event Settings</h2>
+        <h2 className="text-2xl font-bold text-black">Event Settings</h2>
         <a
           href="/"
           target="_blank"
@@ -98,12 +98,12 @@ export default function EventSettings() {
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center gap-3 mb-6">
             <SettingsIcon className="w-6 h-6 text-rose-500" />
-            <h3 className="text-lg font-semibold text-gray-900">Configuration</h3>
+            <h3 className="text-lg font-semibold text-black">Configuration</h3>
           </div>
 
           <form onSubmit={handleSave} className="space-y-6">
             <div>
-              <label htmlFor="eventName" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="eventName" className="block text-sm font-medium text-black mb-2">
                 Event Name
               </label>
               <input
@@ -111,17 +111,17 @@ export default function EventSettings() {
                 id="eventName"
                 value={settings.eventName}
                 onChange={(e) => setSettings({ ...settings, eventName: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-rose-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-rose-500 text-black"
                 placeholder="e.g., Sarah & John's Wedding"
                 required
               />
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-black mt-1">
                 This will be displayed as the main heading on the guest portal
               </p>
             </div>
 
             <div>
-              <label htmlFor="homePageText" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="homePageText" className="block text-sm font-medium text-black mb-2">
                 Welcome Message
               </label>
               <textarea
@@ -129,11 +129,11 @@ export default function EventSettings() {
                 value={settings.homePageText}
                 onChange={(e) => setSettings({ ...settings, homePageText: e.target.value })}
                 rows={4}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-rose-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-rose-500 text-black"
                 placeholder="Enter a welcome message for your guests..."
                 required
               />
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-black mt-1">
                 This message will appear below the event name on the guest portal
               </p>
             </div>
@@ -141,7 +141,7 @@ export default function EventSettings() {
             <div className="flex items-center justify-between pt-4 border-t border-gray-200">
               <div>
                 {settings.updatedAt && (
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-black">
                     Last updated: {new Date(settings.updatedAt).toLocaleString()}
                   </p>
                 )}
@@ -176,7 +176,7 @@ export default function EventSettings() {
 
         {/* Live Preview */}
         <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-6 flex items-center gap-2">
+          <h3 className="text-lg font-semibold text-black mb-6 flex items-center gap-2">
             <Eye className="w-5 h-5 text-rose-500" />
             Live Preview
           </h3>
@@ -186,20 +186,20 @@ export default function EventSettings() {
               <div className="mx-auto w-12 h-12 bg-gradient-to-br from-pink-400 to-rose-500 rounded-full flex items-center justify-center mb-3">
                 <Heart className="w-6 h-6 text-white fill-current" />
               </div>
-              <h1 className="text-2xl font-bold text-gray-900 mb-2">
+              <h1 className="text-2xl font-bold text-black mb-2">
                 {settings.eventName || 'Your Event Name'}
               </h1>
-              <p className="text-gray-600">
+              <p className="text-black">
                 {settings.homePageText || 'Your welcome message will appear here'}
               </p>
             </div>
 
             <div className="mt-6 bg-white rounded-lg shadow p-4 border border-rose-100">
               <div className="text-center">
-                <p className="text-sm text-gray-500 mb-2">Guest Search Form</p>
-                <div className="bg-gray-100 rounded-lg p-3 text-sm text-gray-400">
+                <p className="text-sm text-black mb-2">Guest Search Form</p>
+                <div className="bg-gray-100 rounded-lg p-3 text-sm text-black">
                   Enter Your Name
-                  <div className="mt-2 bg-white rounded border px-3 py-2 text-left">
+                  <div className="mt-2 bg-white rounded border px-3 py-2 text-left text-black">
                     Type your full name...
                   </div>
                   <button className="mt-2 w-full bg-gradient-to-r from-pink-500 to-rose-500 text-white py-2 px-4 rounded-lg text-sm">
@@ -220,23 +220,23 @@ export default function EventSettings() {
 
       {/* Quick Stats */}
       <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Information</h3>
+        <h3 className="text-lg font-semibold text-black mb-4">Quick Information</h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="bg-gradient-to-br from-pink-50 to-rose-50 rounded-lg p-4 border border-rose-100">
-            <h4 className="font-medium text-gray-900 mb-1">Guest Portal URL</h4>
-            <p className="text-sm text-gray-600 break-all">
+            <h4 className="font-medium text-black mb-1">Guest Portal URL</h4>
+            <p className="text-sm text-black break-all">
               {typeof window !== 'undefined' ? window.location.origin : 'Your domain'}
             </p>
           </div>
           <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-4 border border-blue-100">
-            <h4 className="font-medium text-gray-900 mb-1">Admin Portal URL</h4>
-            <p className="text-sm text-gray-600 break-all">
+            <h4 className="font-medium text-black mb-1">Admin Portal URL</h4>
+            <p className="text-sm text-black break-all">
               {typeof window !== 'undefined' ? `${window.location.origin}/admin` : 'Your domain/admin'}
             </p>
           </div>
           <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg p-4 border border-green-100">
-            <h4 className="font-medium text-gray-900 mb-1">CSV Import Format</h4>
-            <p className="text-sm text-gray-600">
+            <h4 className="font-medium text-black mb-1">CSV Import Format</h4>
+            <p className="text-sm text-black">
               Columns: name, phoneNumber, address
             </p>
           </div>
