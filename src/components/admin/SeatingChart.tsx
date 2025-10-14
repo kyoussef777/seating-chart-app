@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useDrop } from 'react-dnd';
-import { Plus, Edit, Trash2, Users, Grid, ZoomIn, ZoomOut, RotateCcw, Move, Shuffle, Search } from 'lucide-react';
+import { Plus, Users, Grid, ZoomIn, ZoomOut, RotateCcw, Move, Shuffle, Search } from 'lucide-react';
 import { useTheme } from '@/hooks/useTheme';
 import DraggableTable from './DraggableTable';
 import DraggableGuest from './DraggableGuest';
@@ -34,7 +34,6 @@ export default function SeatingChart() {
   const [filteredGuests, setFilteredGuests] = useState<Guest[]>([]);
   const [guestSearchTerm, setGuestSearchTerm] = useState('');
   const [showAddTable, setShowAddTable] = useState(false);
-  const [showBulkAssign, setShowBulkAssign] = useState(false);
   const [newTable, setNewTable] = useState({
     name: '',
     shape: 'round',
@@ -71,7 +70,7 @@ export default function SeatingChart() {
 
   const [, drop] = useDrop(() => ({
     accept: ['table', 'guest'],
-    drop: (item: any, monitor) => {
+    drop: (item: { id: string; type: string }, monitor) => {
       console.log('Drop event:', item, 'didDrop:', monitor.didDrop());
       if (!monitor.didDrop() && item.type === 'table') {
         const dropOffset = monitor.getClientOffset();
@@ -225,40 +224,6 @@ export default function SeatingChart() {
     }
   };
 
-  const handleMoveTable = async (tableId: string, deltaX: number, deltaY: number) => {
-    const table = tables.find(t => t.id === tableId);
-    if (!table) return;
-
-    const newX = Math.max(0, table.positionX + deltaX);
-    const newY = Math.max(0, table.positionY + deltaY);
-
-    try {
-      const response = await fetch('/api/tables', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          id: tableId,
-          positionX: newX,
-          positionY: newY,
-        }),
-      });
-
-      if (response.ok) {
-        setTables(prev =>
-          prev.map(t =>
-            t.id === tableId
-              ? { ...t, positionX: newX, positionY: newY }
-              : t
-          )
-        );
-      }
-    } catch (error) {
-      console.error('Failed to move table:', error);
-    }
-  };
-
   const handleSetTablePosition = async (tableId: string, newX: number, newY: number) => {
     try {
       const response = await fetch('/api/tables', {
@@ -360,14 +325,17 @@ export default function SeatingChart() {
     const guest = unassignedGuests.find(g => g.id === guestId);
     const table = tables.find(t => t.id === tableId);
 
-    if (!guest || !table) return;
+    if (!guest || !table) {
+      console.error('Guest or table not found');
+      return;
+    }
 
     // Check if there's enough capacity for this party
     const availableSeats = getAvailableSeats(table);
     const partySize = guest.partySize || 1;
 
     if (availableSeats < partySize) {
-      alert(`Not enough space! This party needs ${partySize} seats but only ${availableSeats} are available.`);
+      alert(`Not enough space! This party needs ${partySize} seat${partySize > 1 ? 's' : ''} but only ${availableSeats} seat${availableSeats !== 1 ? 's' : ''} available at ${table.name}.`);
       return;
     }
 
@@ -384,22 +352,20 @@ export default function SeatingChart() {
       });
 
       if (response.ok) {
-        // Move guest from unassigned to the table
-        setUnassignedGuests(prev => prev.filter(g => g.id !== guestId));
-        setTables(prev =>
-          prev.map(t =>
-            t.id === tableId
-              ? { ...t, guests: [...t.guests, { ...guest, tableId }] }
-              : t
-          )
-        );
+        // Refresh data from server to ensure we have the correct state
+        // This prevents any client-side state inconsistencies
+        await refreshData();
+      } else {
+        const errorData = await response.json();
+        alert(`Failed to assign guest: ${errorData.error || 'Unknown error'}`);
         // Refresh data to ensure consistency
-        setTimeout(refreshData, 200);
+        await refreshData();
       }
     } catch (error) {
       console.error('Failed to assign guest:', error);
+      alert('Failed to assign guest. Please try again.');
       // Refresh on error to get correct state
-      setTimeout(refreshData, 200);
+      await refreshData();
     }
   }, [unassignedGuests, tables, refreshData]);
 
@@ -496,7 +462,6 @@ export default function SeatingChart() {
 
     const canvasWidth = 800;
     const canvasHeight = 600;
-    const tableSpacing = 180;
     const centerX = canvasWidth / 2;
     const centerY = canvasHeight / 2;
 
@@ -544,54 +509,6 @@ export default function SeatingChart() {
     });
   }, [tables]);
 
-  const handleBulkAssign = useCallback(async () => {
-    if (unassignedGuests.length === 0 || tables.length === 0) return;
-
-    const updatedTables = [...tables];
-    let guestIndex = 0;
-
-    // Auto-assign guests to tables with available capacity (accounting for party size)
-    for (const table of updatedTables) {
-      let availableSeats = getAvailableSeats(table);
-
-      while (guestIndex < unassignedGuests.length && availableSeats > 0) {
-        const guest = unassignedGuests[guestIndex];
-        const partySize = guest.partySize || 1;
-
-        // Only assign if the party fits
-        if (partySize <= availableSeats) {
-          try {
-            const response = await fetch('/api/guests', {
-              method: 'PUT',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                id: guest.id,
-                tableId: table.id,
-              }),
-            });
-
-            if (response.ok) {
-              table.guests.push({ ...guest, tableId: table.id });
-              availableSeats -= partySize;
-            }
-          } catch (error) {
-            console.error('Failed to assign guest:', error);
-          }
-        }
-
-        guestIndex++;
-      }
-
-      if (guestIndex >= unassignedGuests.length) break;
-    }
-
-    // Refresh data to ensure consistency
-    setTimeout(refreshData, 200);
-    setShowBulkAssign(false);
-  }, [tables, unassignedGuests, refreshData]);
-
   if (loading) {
     return (
       <div className="text-center py-12">
@@ -614,15 +531,6 @@ export default function SeatingChart() {
           >
             <Shuffle className="w-4 h-4" />
             Auto Arrange
-          </button>
-          <button
-            onClick={() => setShowBulkAssign(true)}
-            disabled={unassignedGuests.length === 0 || tables.length === 0}
-            className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg transition-colors ${themeConfig.button.secondary} disabled:opacity-50 disabled:cursor-not-allowed`}
-            title="Bulk assign guests"
-          >
-            <Users className="w-4 h-4" />
-            Bulk Assign
           </button>
           <button
             onClick={() => setShowAddTable(true)}
@@ -665,7 +573,7 @@ export default function SeatingChart() {
               />
             ))}
             {filteredGuests.length === 0 && unassignedGuests.length > 0 && (
-              <p className="text-black text-sm">No guests found matching "{guestSearchTerm}"</p>
+              <p className="text-black text-sm">No guests found matching &ldquo;{guestSearchTerm}&rdquo;</p>
             )}
             {unassignedGuests.length === 0 && (
               <p className="text-black text-sm">All guests are assigned!</p>
@@ -746,7 +654,7 @@ export default function SeatingChart() {
                 <div className="absolute inset-0 flex items-center justify-center text-black">
                   <div className="text-center">
                     <Grid className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                    <p>No tables yet. Click "Add Table" to get started.</p>
+                    <p>No tables yet. Click &ldquo;Add Table&rdquo; to get started.</p>
                   </div>
                 </div>
               )}
@@ -835,48 +743,6 @@ export default function SeatingChart() {
         </div>
       )}
 
-      {/* Bulk Assignment Modal */}
-      {showBulkAssign && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
-            <h3 className="text-lg font-semibold mb-4 text-black">Bulk Assign Guests</h3>
-            <div className="space-y-4">
-              <p className="text-sm text-black">
-                This will automatically assign {unassignedGuests.length} unassigned guests to available tables based on capacity.
-              </p>
-              <div className="space-y-2">
-                {tables.map(table => {
-                  const seatsUsed = getSeatsUsed(table.guests);
-                  const availableSeats = table.capacity - seatsUsed;
-                  return (
-                    <div key={table.id} className="flex justify-between text-sm text-black">
-                      <span className="font-medium">{table.name}</span>
-                      <span className={availableSeats > 0 ? 'text-green-600' : 'text-red-600'}>
-                        {availableSeats > 0 ? `${availableSeats}/${table.capacity} seats available` : 'Full'}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-              <div className="flex gap-3 pt-4">
-                <button
-                  onClick={handleBulkAssign}
-                  className={`flex-1 py-2 px-4 rounded-lg transition-colors ${themeConfig.button.primary}`}
-                >
-                  Assign Guests
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowBulkAssign(false)}
-                  className={`px-4 py-2 rounded-lg transition-colors ${themeConfig.button.secondary}`}
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

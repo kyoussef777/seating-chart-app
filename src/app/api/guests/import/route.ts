@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
     const invalidRows = [];
 
     for (let i = 0; i < data.length; i++) {
-      const row = data[i] as any;
+      const row = data[i] as { name?: string; phoneNumber?: string; address?: string };
 
       if (!row.name || typeof row.name !== 'string' || row.name.trim() === '') {
         invalidRows.push({ row: i + 1, error: 'Missing or invalid name' });

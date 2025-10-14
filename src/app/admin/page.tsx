@@ -6,15 +6,10 @@ import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import {
   LogOut,
-  Plus,
-  Upload,
   Settings,
   Users,
   Grid,
-  Heart,
-  Save,
-  Edit,
-  Trash2
+  Heart
 } from 'lucide-react';
 import { useTheme } from '@/hooks/useTheme';
 import SeatingChart from '@/components/admin/SeatingChart';

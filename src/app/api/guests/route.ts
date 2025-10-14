@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth';
 import { db } from '@/lib/db';
-import { guests } from '@/lib/schema';
+import { guests, tables } from '@/lib/schema';
 import { eq, ilike } from 'drizzle-orm';
 
 export async function GET(request: NextRequest) {
@@ -77,13 +77,68 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    const updateData: any = {};
+    // Get the current guest to check their current table and party size
+    const [currentGuest] = await db.select().from(guests).where(eq(guests.id, id));
+
+    if (!currentGuest) {
+      return NextResponse.json(
+        { error: 'Guest not found' },
+        { status: 404 }
+      );
+    }
+
+    // If assigning to a table (not unassigning), validate capacity
+    if (tableId !== undefined && tableId !== null) {
+      // Get the table
+      const [table] = await db.select().from(tables).where(eq(tables.id, tableId));
+
+      if (!table) {
+        return NextResponse.json(
+          { error: 'Table not found' },
+          { status: 404 }
+        );
+      }
+
+      // Get all guests currently assigned to this table (excluding the current guest if they're already at this table)
+      const tableGuests = await db
+        .select()
+        .from(guests)
+        .where(eq(guests.tableId, tableId));
+
+      // Calculate current seats used (excluding this guest if they're already assigned to this table)
+      const currentSeatsUsed = tableGuests
+        .filter(g => g.id !== id)
+        .reduce((total, g) => total + (g.partySize || 1), 0);
+
+      // Get the party size (use new value if updating, otherwise use current)
+      const guestPartySize = partySize !== undefined ? partySize : (currentGuest.partySize || 1);
+
+      // Calculate total seats if we add this guest
+      const totalSeatsNeeded = currentSeatsUsed + guestPartySize;
+
+      // Check if there's enough capacity
+      if (totalSeatsNeeded > table.capacity) {
+        const availableSeats = table.capacity - currentSeatsUsed;
+        return NextResponse.json(
+          { error: `Not enough space at ${table.name}. This party needs ${guestPartySize} seat${guestPartySize > 1 ? 's' : ''} but only ${availableSeats} seat${availableSeats !== 1 ? 's' : ''} available.` },
+          { status: 400 }
+        );
+      }
+    }
+
+    const updateData: {
+      name?: string;
+      phoneNumber?: string | null;
+      address?: string | null;
+      tableId?: string | null;
+      partySize?: number;
+      updatedAt: Date;
+    } = { updatedAt: new Date() };
     if (name !== undefined) updateData.name = name;
     if (phoneNumber !== undefined) updateData.phoneNumber = phoneNumber;
     if (address !== undefined) updateData.address = address;
     if (tableId !== undefined) updateData.tableId = tableId;
     if (partySize !== undefined) updateData.partySize = partySize;
-    updateData.updatedAt = new Date();
 
     const [updatedGuest] = await db
       .update(guests)

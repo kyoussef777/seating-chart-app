@@ -113,15 +113,6 @@ export default function DraggableTable({
   const isCocktail = table.shape === 'cocktail';
   const isUShape = table.shape === 'u-shape';
 
-  const getTableClasses = () => {
-    if (isRound) return 'rounded-full w-32 h-32 flex flex-col items-center justify-center';
-    if (isSquare) return 'rounded-lg w-32 h-32 flex flex-col items-center justify-center';
-    if (isOval) return 'rounded-full w-40 h-24 flex flex-col items-center justify-center';
-    if (isCocktail) return 'rounded-full w-24 h-24 flex flex-col items-center justify-center';
-    if (isUShape) return 'rounded-lg w-48 h-32 flex flex-col items-center justify-center clip-path-u';
-    return 'rounded-lg'; // rectangular default
-  };
-
   const shouldUseCompactLayout = isRound || isSquare || isCocktail || isOval || isUShape;
 
   return (
@@ -156,7 +147,7 @@ export default function DraggableTable({
             onMouseDown={(e) => e.stopPropagation()}
             onClick={(e) => {
               e.stopPropagation();
-              const newRotation = ((table.rotation || 0) + 15) % 360;
+              const newRotation = ((table.rotation || 0) + 90) % 360;
               onRotate(table.id, newRotation);
             }}
             className="p-1 text-blue-500 hover:bg-blue-100 rounded transition-colors flex-shrink-0 z-10"

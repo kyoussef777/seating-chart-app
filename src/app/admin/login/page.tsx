@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { Heart, Lock } from 'lucide-react';
 import { useTheme } from '@/hooks/useTheme';
 
@@ -111,9 +112,9 @@ export default function LoginPage() {
           </form>
 
           <div className="mt-6 text-center">
-            <a href="/" className="text-amber-600 hover:text-rose-600 text-sm font-medium">
+            <Link href="/" className="text-amber-600 hover:text-rose-600 text-sm font-medium">
               ← Back to Guest Portal
-            </a>
+            </Link>
           </div>
         </div>
       </div>

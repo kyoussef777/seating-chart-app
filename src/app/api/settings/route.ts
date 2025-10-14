@@ -47,7 +47,11 @@ export async function PUT(request: NextRequest) {
 
     if (existingSettings) {
       // Update existing settings
-      const updateData: any = { updatedAt: new Date() };
+      const updateData: {
+        eventName?: string;
+        homePageText?: string;
+        updatedAt: Date;
+      } = { updatedAt: new Date() };
       if (eventName !== undefined) updateData.eventName = eventName;
       if (homePageText !== undefined) updateData.homePageText = homePageText;
 

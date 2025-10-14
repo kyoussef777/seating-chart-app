@@ -84,7 +84,7 @@ export const theme = {
 
 // Utility functions for dynamic theme application
 export const getThemeClass = (category: keyof typeof theme, variant: string) => {
-  const categoryObj = theme[category] as any;
+  const categoryObj = theme[category] as Record<string, string>;
   return categoryObj?.[variant] || '';
 };
 

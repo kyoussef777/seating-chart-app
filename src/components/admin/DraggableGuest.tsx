@@ -33,7 +33,7 @@ export default function DraggableGuest({
 
   return (
     <div
-      ref={drag}
+      ref={drag as unknown as React.LegacyRef<HTMLDivElement>}
       className={`
         bg-gray-50 border border-gray-200 rounded-lg p-2 cursor-move select-none
         hover:bg-gray-100 hover:border-gray-300 transition-colors
