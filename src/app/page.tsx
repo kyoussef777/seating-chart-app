@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Search, MapPin, Heart, Edit3 } from 'lucide-react';
+import Image from 'next/image';
+import { Search, MapPin, Edit3 } from 'lucide-react';
 import { useTheme } from '@/hooks/useTheme';
 
 interface Guest {
@@ -220,8 +221,8 @@ export default function HomePage() {
       <div className="container mx-auto px-4 py-8 max-w-2xl">
         {/* Header */}
         <div className="text-center mb-8">
-          <div className={`mx-auto w-16 h-16 ${themeConfig.icon.primary} mb-4`}>
-            <Heart className="w-8 h-8 text-white fill-current" />
+          <div className="mx-auto w-32 h-32 mb-4 relative">
+            <Image src="/logo.png" alt="Mira & Kamal" fill className="object-contain" />
           </div>
           <h1 className={`text-3xl ${themeConfig.text.heading} mb-2`}>{settings.eventName}</h1>
           <p className={`${themeConfig.text.body} text-lg`}>{settings.homePageText}</p>

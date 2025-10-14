@@ -16,8 +16,8 @@ export const metadata: Metadata = {
   title: "Mira & Kamal's Engagement",
   description: "Find your table assignment for Mira & Kamal's engagement celebration",
   icons: {
-    icon: '/logo.png',
-    apple: '/logo.png',
+    icon: '/logo-bg.png',
+    apple: '/logo-bg.png',
   },
   openGraph: {
     title: "Mira & Kamal's Engagement",
@@ -33,6 +33,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        <link rel="icon" href="/logo-bg.png" type="image/png" />
+        <link rel="apple-touch-icon" href="/logo-bg.png" />
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
         suppressHydrationWarning
