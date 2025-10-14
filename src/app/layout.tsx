@@ -13,8 +13,17 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Wedding Seating Chart",
-  description: "Manage your wedding or event seating arrangements",
+  title: "Mira & Kamal's Engagement",
+  description: "Find your table assignment for Mira & Kamal's engagement celebration",
+  icons: {
+    icon: '/logo.png',
+    apple: '/logo.png',
+  },
+  openGraph: {
+    title: "Mira & Kamal's Engagement",
+    description: "Find your table assignment for Mira & Kamal's engagement celebration",
+    images: ['/logo.png'],
+  },
 };
 
 export default function RootLayout({
