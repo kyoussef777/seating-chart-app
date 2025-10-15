@@ -9,19 +9,21 @@ import {
   Settings,
   Users,
   Grid,
-  Heart
+  Heart,
+  ShieldCheck
 } from 'lucide-react';
 import { useTheme } from '@/hooks/useTheme';
 import SeatingChart from '@/components/admin/SeatingChart';
 import GuestList from '@/components/admin/GuestList';
 import EventSettings from '@/components/admin/EventSettings';
+import UserManagement from '@/components/admin/UserManagement';
 
 interface User {
   id: string;
   username: string;
 }
 
-type Tab = 'seating' | 'guests' | 'settings';
+type Tab = 'seating' | 'guests' | 'settings' | 'users';
 
 export default function AdminPage() {
   const themeConfig = useTheme();
@@ -79,6 +81,7 @@ export default function AdminPage() {
     { id: 'seating' as const, name: 'Seating Chart', icon: Grid },
     { id: 'guests' as const, name: 'Guest List', icon: Users },
     { id: 'settings' as const, name: 'Event Settings', icon: Settings },
+    { id: 'users' as const, name: 'User Management', icon: ShieldCheck },
   ];
 
   return (
@@ -142,6 +145,7 @@ export default function AdminPage() {
           {activeTab === 'seating' && <SeatingChart />}
           {activeTab === 'guests' && <GuestList />}
           {activeTab === 'settings' && <EventSettings />}
+          {activeTab === 'users' && <UserManagement />}
         </main>
       </div>
     </DndProvider>
