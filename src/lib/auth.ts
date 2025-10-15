@@ -5,7 +5,11 @@ import { db } from './db';
 import { users } from './schema';
 import { eq } from 'drizzle-orm';
 
-const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET || 'fallback-secret');
+if (!process.env.JWT_SECRET) {
+  throw new Error('JWT_SECRET environment variable is required');
+}
+
+const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET);
 
 export async function hashPassword(password: string): Promise<string> {
   return bcrypt.hash(password, 12);

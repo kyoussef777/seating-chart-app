@@ -4,6 +4,8 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useDrop } from 'react-dnd';
 import { Plus, Users, Grid, ZoomIn, ZoomOut, RotateCcw, Move, Shuffle, Search } from 'lucide-react';
 import { useTheme } from '@/hooks/useTheme';
+import { useDebounce } from '@/hooks/useDebounce';
+import { useToast } from '@/contexts/ToastContext';
 import DraggableTable from './DraggableTable';
 import DraggableGuest from './DraggableGuest';
 
@@ -29,10 +31,12 @@ interface Guest {
 
 export default function SeatingChart() {
   const themeConfig = useTheme();
+  const toast = useToast();
   const [tables, setTables] = useState<Table[]>([]);
   const [unassignedGuests, setUnassignedGuests] = useState<Guest[]>([]);
   const [filteredGuests, setFilteredGuests] = useState<Guest[]>([]);
   const [guestSearchTerm, setGuestSearchTerm] = useState('');
+  const debouncedGuestSearchTerm = useDebounce(guestSearchTerm, 300);
   const [showAddTable, setShowAddTable] = useState(false);
   const [newTable, setNewTable] = useState({
     name: '',
@@ -94,16 +98,16 @@ export default function SeatingChart() {
   }, []);
 
   useEffect(() => {
-    if (guestSearchTerm.trim()) {
+    if (debouncedGuestSearchTerm.trim()) {
       setFilteredGuests(
         unassignedGuests.filter(guest =>
-          guest.name.toLowerCase().includes(guestSearchTerm.toLowerCase())
+          guest.name.toLowerCase().includes(debouncedGuestSearchTerm.toLowerCase())
         )
       );
     } else {
       setFilteredGuests(unassignedGuests);
     }
-  }, [unassignedGuests, guestSearchTerm]);
+  }, [unassignedGuests, debouncedGuestSearchTerm]);
 
   const fetchTablesAndGuests = useCallback(async () => {
     try {
@@ -335,7 +339,7 @@ export default function SeatingChart() {
     const partySize = guest.partySize || 1;
 
     if (availableSeats < partySize) {
-      alert(`Not enough space! This party needs ${partySize} seat${partySize > 1 ? 's' : ''} but only ${availableSeats} seat${availableSeats !== 1 ? 's' : ''} available at ${table.name}.`);
+      toast.error(`Not enough space! This party needs ${partySize} seat${partySize > 1 ? 's' : ''} but only ${availableSeats} seat${availableSeats !== 1 ? 's' : ''} available at ${table.name}.`);
       return;
     }
 
@@ -355,15 +359,16 @@ export default function SeatingChart() {
         // Refresh data from server to ensure we have the correct state
         // This prevents any client-side state inconsistencies
         await refreshData();
+        toast.success(`${guest.name} assigned to ${table.name}`);
       } else {
         const errorData = await response.json();
-        alert(`Failed to assign guest: ${errorData.error || 'Unknown error'}`);
+        toast.error(`Failed to assign guest: ${errorData.error || 'Unknown error'}`);
         // Refresh data to ensure consistency
         await refreshData();
       }
     } catch (error) {
       console.error('Failed to assign guest:', error);
-      alert('Failed to assign guest. Please try again.');
+      toast.error('Failed to assign guest. Please try again.');
       // Refresh on error to get correct state
       await refreshData();
     }

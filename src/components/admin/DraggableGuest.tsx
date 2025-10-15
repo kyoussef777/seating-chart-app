@@ -1,5 +1,6 @@
 'use client';
 
+import React from 'react';
 import { useDrag } from 'react-dnd';
 import { User, X, Users } from 'lucide-react';
 
@@ -18,7 +19,7 @@ interface DraggableGuestProps {
   showUnassign?: boolean;
 }
 
-export default function DraggableGuest({
+function DraggableGuest({
   guest,
   onUnassign,
   showUnassign = false
@@ -78,3 +79,15 @@ export default function DraggableGuest({
     </div>
   );
 }
+
+export default React.memo(DraggableGuest, (prevProps, nextProps) => {
+  // Only re-render if guest data or props actually changed
+  return (
+    prevProps.guest.id === nextProps.guest.id &&
+    prevProps.guest.name === nextProps.guest.name &&
+    prevProps.guest.phoneNumber === nextProps.guest.phoneNumber &&
+    prevProps.guest.partySize === nextProps.guest.partySize &&
+    prevProps.guest.tableId === nextProps.guest.tableId &&
+    prevProps.showUnassign === nextProps.showUnassign
+  );
+});

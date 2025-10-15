@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireAuth } from '@/lib/auth';
+import { requireAuth, getSession } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { guests, tables } from '@/lib/schema';
 import { eq, ilike } from 'drizzle-orm';
@@ -8,6 +8,10 @@ export async function GET(request: NextRequest) {
   try {
     const url = new URL(request.url);
     const search = url.searchParams.get('search');
+
+    // Check if the request is authenticated
+    const session = await getSession();
+    const isAuthenticated = session !== null;
 
     let guestList;
     if (search) {
@@ -19,6 +23,18 @@ export async function GET(request: NextRequest) {
       guestList = await db.select().from(guests);
     }
 
+    // If not authenticated, return only non-sensitive information
+    if (!isAuthenticated) {
+      const publicGuestList = guestList.map(guest => ({
+        id: guest.id,
+        name: guest.name,
+        tableId: guest.tableId,
+        // Exclude phoneNumber, address, and other PII
+      }));
+      return NextResponse.json({ guests: publicGuestList });
+    }
+
+    // If authenticated (admin), return full guest information
     return NextResponse.json({ guests: guestList });
   } catch (error) {
     console.error('Get guests error:', error);

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { Search, MapPin, Edit3 } from 'lucide-react';
 import { useTheme } from '@/hooks/useTheme';
+import { useDebounce } from '@/hooks/useDebounce';
 
 interface Guest {
   id: string;
@@ -28,6 +29,7 @@ interface EventSettings {
 export default function HomePage() {
   const themeConfig = useTheme();
   const [searchName, setSearchName] = useState('');
+  const debouncedSearchName = useDebounce(searchName, 300);
   const [foundGuest, setFoundGuest] = useState<Guest | null>(null);
   const [guestTable, setGuestTable] = useState<Table | null>(null);
   const [isSearching, setIsSearching] = useState(false);
@@ -86,14 +88,11 @@ export default function HomePage() {
     }
   };
 
-  // Handle search input change with autocomplete
-  const handleSearchChange = (value: string) => {
-    setSearchName(value);
-    setSelectedSuggestionIndex(-1);
-
-    if (value.trim().length > 0) {
+  // Update suggestions based on debounced search term
+  useEffect(() => {
+    if (debouncedSearchName.trim().length > 0) {
       const filteredGuests = allGuests.filter(guest =>
-        guest.name.toLowerCase().includes(value.toLowerCase())
+        guest.name.toLowerCase().includes(debouncedSearchName.toLowerCase())
       ).slice(0, 5); // Limit to 5 suggestions
 
       setSearchSuggestions(filteredGuests);
@@ -102,6 +101,12 @@ export default function HomePage() {
       setSearchSuggestions([]);
       setShowSuggestions(false);
     }
+  }, [debouncedSearchName, allGuests]);
+
+  // Handle search input change
+  const handleSearchChange = (value: string) => {
+    setSearchName(value);
+    setSelectedSuggestionIndex(-1);
   };
 
   // Handle keyboard navigation

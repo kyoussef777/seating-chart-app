@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useDrag, useDrop } from 'react-dnd';
 import { Trash2, Users, X, RotateCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -34,7 +34,7 @@ interface DraggableTableProps {
   onRotate: (tableId: string, rotation: number) => void;
 }
 
-export default function DraggableTable({
+function DraggableTable({
   table,
   onDelete,
   onAssignGuest,
@@ -282,3 +282,26 @@ export default function DraggableTable({
     </div>
   );
 }
+
+export default React.memo(DraggableTable, (prevProps, nextProps) => {
+  // Only re-render if table data or guests actually changed
+  const tableChanged =
+    prevProps.table.id !== nextProps.table.id ||
+    prevProps.table.name !== nextProps.table.name ||
+    prevProps.table.shape !== nextProps.table.shape ||
+    prevProps.table.capacity !== nextProps.table.capacity ||
+    prevProps.table.positionX !== nextProps.table.positionX ||
+    prevProps.table.positionY !== nextProps.table.positionY ||
+    prevProps.table.rotation !== nextProps.table.rotation;
+
+  // Check if guests array changed
+  const guestsChanged =
+    prevProps.table.guests.length !== nextProps.table.guests.length ||
+    prevProps.table.guests.some((guest, index) => {
+      const nextGuest = nextProps.table.guests[index];
+      return !nextGuest || guest.id !== nextGuest.id || guest.partySize !== nextGuest.partySize;
+    });
+
+  // Return true if nothing changed (skip re-render)
+  return !tableChanged && !guestsChanged;
+});

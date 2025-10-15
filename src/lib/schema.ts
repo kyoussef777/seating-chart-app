@@ -1,4 +1,4 @@
-import { pgTable, text, integer, real, timestamp, uuid, varchar } from 'drizzle-orm/pg-core';
+import { pgTable, text, integer, real, timestamp, uuid, varchar, index } from 'drizzle-orm/pg-core';
 
 export const users = pgTable('users', {
   id: uuid('id').defaultRandom().primaryKey(),
@@ -23,7 +23,9 @@ export const tables = pgTable('tables', {
   positionY: real('position_y').notNull().default(0),
   rotation: real('rotation').notNull().default(0), // rotation in degrees (0-360)
   createdAt: timestamp('created_at').defaultNow().notNull(),
-});
+}, (table) => ({
+  nameIdx: index('tables_name_idx').on(table.name),
+}));
 
 export const guests = pgTable('guests', {
   id: uuid('id').defaultRandom().primaryKey(),
@@ -34,7 +36,10 @@ export const guests = pgTable('guests', {
   tableId: uuid('table_id').references(() => tables.id, { onDelete: 'set null' }),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
-});
+}, (table) => ({
+  nameIdx: index('guests_name_idx').on(table.name),
+  tableIdIdx: index('guests_table_id_idx').on(table.tableId),
+}));
 
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;

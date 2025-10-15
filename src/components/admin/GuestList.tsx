@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Upload, Plus, Search, Edit, Trash2, User, Phone, MapPin, Users } from 'lucide-react';
 import { useTheme } from '@/hooks/useTheme';
+import { useToast } from '@/contexts/ToastContext';
 
 interface Guest {
   id: string;
@@ -20,6 +21,7 @@ interface Table {
 
 export default function GuestList() {
   const { button, input, text } = useTheme();
+  const toast = useToast();
   const [guests, setGuests] = useState<Guest[]>([]);
   const [tables, setTables] = useState<Table[]>([]);
   const [filteredGuests, setFilteredGuests] = useState<Guest[]>([]);
@@ -184,16 +186,16 @@ export default function GuestList() {
         }
 
         if (data.invalidRows?.length > 0) {
-          alert(`Imported ${data.imported} guests successfully. ${data.invalidRows.length} rows were skipped due to errors.`);
+          toast.warning(`Imported ${data.imported} guests successfully. ${data.invalidRows.length} rows were skipped due to errors.`);
         } else {
-          alert(`Successfully imported ${data.imported} guests!`);
+          toast.success(`Successfully imported ${data.imported} guests!`);
         }
       } else {
-        alert(`Import failed: ${data.error}`);
+        toast.error(`Import failed: ${data.error}`);
       }
     } catch (error) {
       console.error('Failed to import guests:', error);
-      alert('Import failed. Please try again.');
+      toast.error('Import failed. Please try again.');
     } finally {
       setLoading(false);
     }
