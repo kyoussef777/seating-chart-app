@@ -70,20 +70,21 @@ async function importGuests() {
     console.log('All guests deleted.');
 
     // Read CSV file
-    const csvContent = fs.readFileSync('guestlist (3).csv', 'utf-8');
+    const csvContent = fs.readFileSync('guestlist (4).csv', 'utf-8');
     const lines = csvContent.split('\n').filter(line => line.trim());
 
     // Parse header to get column indices
     const header = parseCSVLine(lines[0]);
     const nameIndex = header.indexOf('Name');
     const phoneIndex = header.indexOf('Phone');
+    const statusIndex = header.indexOf('Status');
     const commentIndex = header.indexOf('RSVP Comment');
     const partyIndex = header.indexOf('Number In Party');
 
-    console.log(`Found columns: Name (${nameIndex}), Phone (${phoneIndex}), RSVP Comment (${commentIndex}), Number In Party (${partyIndex})`);
+    console.log(`Found columns: Name (${nameIndex}), Phone (${phoneIndex}), Status (${statusIndex}), RSVP Comment (${commentIndex}), Number In Party (${partyIndex})`);
 
-    if (nameIndex === -1 || partyIndex === -1) {
-      throw new Error('Required columns (Name, Number In Party) not found in CSV');
+    if (nameIndex === -1 || partyIndex === -1 || statusIndex === -1) {
+      throw new Error('Required columns (Name, Status, Number In Party) not found in CSV');
     }
 
     let imported = 0;
@@ -94,7 +95,16 @@ async function importGuests() {
       const values = parseCSVLine(lines[i]);
 
       const name = values[nameIndex]?.trim();
+      const status = values[statusIndex]?.trim();
+
+      // Skip if no name or status is not "Yes"
       if (!name) {
+        skipped++;
+        continue;
+      }
+
+      if (status !== 'Yes') {
+        console.log(`Skipped: ${name} (Status: ${status || 'N/A'})`);
         skipped++;
         continue;
       }

@@ -222,14 +222,29 @@ export default function HomePage() {
   };
 
   return (
-    <div className={`min-h-screen ${themeConfig.page}`}>
-      <div className="container mx-auto px-4 py-8 max-w-2xl">
+    <div className="min-h-screen relative">
+      {/* Background Image with Overlay */}
+      <div className="fixed inset-0 z-0">
+        <Image
+          src="/6T2A7308.jpg"
+          alt="Background"
+          fill
+          className="object-cover object-top"
+          priority
+          quality={95}
+        />
+        {/* Beige semi-transparent overlay */}
+        <div className="absolute inset-0 bg-stone-100/75 backdrop-blur-[1px]" />
+      </div>
+
+      {/* Content */}
+      <div className="relative z-10 container mx-auto px-4 pt-[25vh] sm:pt-[20vh] pb-8 max-w-2xl">
         {/* Header */}
         <div className="text-center mb-8">
           <div className="mx-auto w-32 h-32 mb-4 relative">
             <Image src="/logo.png" alt="Mira & Kamal" fill className="object-contain" />
           </div>
-          <h1 className={`text-3xl ${themeConfig.text.heading} mb-2`}>{settings.eventName}</h1>
+          <h1 className={`text-3xl ${themeConfig.text.heading} mb-2 font-[family-name:var(--font-jimmy-script)]`}>{settings.eventName}</h1>
           <p className={`${themeConfig.text.body} text-lg`}>{settings.homePageText}</p>
         </div>
 
@@ -264,29 +279,28 @@ export default function HomePage() {
                   required
                   autoComplete="off"
                 />
-                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                <Search className={`absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 ${themeConfig.icon.color.muted}`} />
 
                 {/* Autocomplete Suggestions */}
                 {showSuggestions && searchSuggestions.length > 0 && (
-                  <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                  <div className={`absolute z-10 w-full mt-1 bg-white ${themeConfig.classes.borderDefault} rounded-lg shadow-lg max-h-60 overflow-y-auto`}>
                     {searchSuggestions.map((guest, index) => (
                       <button
                         key={guest.id}
                         type="button"
                         onClick={() => handleSelectGuest(guest)}
-                        className={`w-full px-4 py-3 text-left focus:outline-none border-b border-gray-100 last:border-b-0 transition-colors ${
+                        className={`w-full px-4 py-3 text-left focus:outline-none border-b border-stone-100 last:border-b-0 transition-colors ${
                           index === selectedSuggestionIndex
-                            ? 'bg-yellow-100 border-yellow-200'
-                            : 'hover:bg-gray-50'
+                            ? `${themeConfig.theme.badge.unassigned.bg} ${themeConfig.theme.badge.unassigned.border}`
+                            : 'hover:bg-stone-50'
                         }`}
                       >
                         <div className="flex justify-between items-center">
                           <span className={themeConfig.text.body}>{guest.name}</span>
-                          <span className={`text-sm font-medium px-2 py-1 rounded-full ${
-                            getTableName(guest.tableId) === 'Unassigned'
-                              ? 'bg-yellow-100 text-yellow-800'
-                              : 'bg-green-100 text-green-800'
-                          }`}>
+                          <span className={getTableName(guest.tableId) === 'Unassigned'
+                            ? themeConfig.badge.unassigned
+                            : themeConfig.badge.assigned
+                          }>
                             {getTableName(guest.tableId)}
                           </span>
                         </div>
@@ -300,16 +314,16 @@ export default function HomePage() {
             <button
               type="submit"
               disabled={isSearching}
-              className={`w-full ${themeConfig.button.primary} flex items-center justify-center gap-2 text-white`}
+              className={`w-full ${themeConfig.button.primary} flex items-center justify-center gap-2`}
             >
               {isSearching ? (
                 <>
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  <div className={`w-4 h-4 border-2 ${themeConfig.text.white} border-t-transparent rounded-full animate-spin`} />
                   Searching...
                 </>
               ) : (
                 <>
-                  <Search className="w-4 h-4 text-white" />
+                  <Search className={`w-4 h-4 ${themeConfig.text.white}`} />
                   Find My Table
                 </>
               )}
@@ -319,24 +333,24 @@ export default function HomePage() {
 
         {/* Search Results */}
         {foundGuest && (
-          <div className="${themeConfig.card} mb-6">
-            <h2 className="text-xl font-bold text-black mb-4 flex items-center gap-2">
-              <MapPin className="w-5 h-5 text-amber-600" />
+          <div className={`${themeConfig.card} mb-6`}>
+            <h2 className={`text-xl font-bold ${themeConfig.text.heading} mb-4 flex items-center gap-2`}>
+              <MapPin className={`w-5 h-5 ${themeConfig.icon.color.primary}`} />
               Welcome, {foundGuest.name}!
             </h2>
 
             {guestTable ? (
-              <div className="bg-gradient-to-r from-yellow-50 to-amber-50 rounded-lg p-6 border border-yellow-200">
-                <h3 className="font-semibold text-black text-lg mb-4 text-center">Your Table Assignment</h3>
+              <div className={`${themeConfig.theme.gradient.floral} rounded-lg p-6 ${themeConfig.classes.borderBeige}`}>
+                <h3 className={`font-semibold ${themeConfig.text.heading} text-lg mb-4 text-center`}>Your Table Assignment</h3>
                 <div className="flex justify-center">
-                  <div className="bg-white rounded-lg px-8 py-4 border-2 border-yellow-400 shadow-md">
-                    <span className="text-3xl font-bold text-amber-700">{guestTable.name}</span>
+                  <div className={`bg-white rounded-lg px-8 py-4 border-2 ${themeConfig.classes.borderPrimary} shadow-md`}>
+                    <span className={`text-3xl font-bold ${themeConfig.text.primary}`}>{guestTable.name}</span>
                   </div>
                 </div>
               </div>
             ) : (
-              <div className="bg-yellow-50 rounded-lg p-4 border border-yellow-200">
-                <p className="text-yellow-800">
+              <div className={themeConfig.badge.unassigned + ' rounded-lg p-4'}>
+                <p>
                   Your table assignment is being finalized. Please check back later or contact the hosts.
                 </p>
               </div>
@@ -346,14 +360,14 @@ export default function HomePage() {
 
         {/* Address Form */}
         {showAddressForm && foundGuest && (
-          <div className="${themeConfig.card} mb-6">
-            <h3 className="text-lg font-semibold text-black mb-4 flex items-center gap-2">
-              <Edit3 className="w-5 h-5 text-amber-600" />
+          <div className={`${themeConfig.card} mb-6`}>
+            <h3 className={`text-lg font-semibold ${themeConfig.text.heading} mb-4 flex items-center gap-2`}>
+              <Edit3 className={`w-5 h-5 ${themeConfig.icon.color.primary}`} />
               Please Provide Your Address
             </h3>
             <form onSubmit={handleAddressUpdate} className="space-y-4">
               <div>
-                <label htmlFor="address" className="block text-sm font-medium text-black mb-2">
+                <label htmlFor="address" className={`block ${themeConfig.text.label} mb-2`}>
                   Mailing Address
                 </label>
                 <textarea
@@ -361,7 +375,7 @@ export default function HomePage() {
                   value={address}
                   onChange={(e) => setAddress(e.target.value)}
                   placeholder="Enter your complete mailing address..."
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 transition-colors h-20 text-black"
+                  className={`w-full px-3 py-2 rounded-lg h-20 ${themeConfig.input}`}
                   required
                 />
               </div>
@@ -369,14 +383,14 @@ export default function HomePage() {
                 <button
                   type="submit"
                   disabled={isUpdatingAddress}
-                  className="flex-1 bg-gradient-to-r from-yellow-500 to-amber-600 text-white py-2 px-4 rounded-lg font-medium hover:from-yellow-600 hover:to-amber-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className={`flex-1 ${themeConfig.button.primary}`}
                 >
                   {isUpdatingAddress ? 'Saving...' : 'Save Address'}
                 </button>
                 <button
                   type="button"
                   onClick={() => setShowAddressForm(false)}
-                  className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+                  className={themeConfig.button.tertiary}
                 >
                   Skip
                 </button>

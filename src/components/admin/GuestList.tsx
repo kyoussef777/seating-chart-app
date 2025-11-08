@@ -20,7 +20,7 @@ interface Table {
 }
 
 export default function GuestList() {
-  const { button, input, text } = useTheme();
+  const themeConfig = useTheme();
   const toast = useToast();
   const [guests, setGuests] = useState<Guest[]>([]);
   const [tables, setTables] = useState<Table[]>([]);
@@ -30,6 +30,8 @@ export default function GuestList() {
   const [showImport, setShowImport] = useState(false);
   const [editingGuest, setEditingGuest] = useState<Guest | null>(null);
   const [loading, setLoading] = useState(true);
+  const [selectedGuests, setSelectedGuests] = useState<Set<string>>(new Set());
+  const [showBulkActions, setShowBulkActions] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [newGuest, setNewGuest] = useState({
@@ -44,6 +46,21 @@ export default function GuestList() {
     fetchGuests();
     fetchTables();
   }, []);
+
+  // Close bulk actions dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (showBulkActions) {
+        const target = event.target as HTMLElement;
+        if (!target.closest('.bulk-actions-dropdown')) {
+          setShowBulkActions(false);
+        }
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showBulkActions]);
 
   useEffect(() => {
     if (searchTerm.trim()) {
@@ -207,11 +224,83 @@ export default function GuestList() {
     return table?.name || 'Unknown Table';
   };
 
+  // Calculate total people count (sum of party sizes)
+  const getTotalPeople = (guestList: Guest[]) => {
+    return guestList.reduce((sum, guest) => sum + guest.partySize, 0);
+  };
+
+  // Multi-select handlers
+  const toggleSelectGuest = (guestId: string) => {
+    const newSelected = new Set(selectedGuests);
+    if (newSelected.has(guestId)) {
+      newSelected.delete(guestId);
+    } else {
+      newSelected.add(guestId);
+    }
+    setSelectedGuests(newSelected);
+  };
+
+  const selectAllGuests = () => {
+    if (selectedGuests.size === filteredGuests.length) {
+      setSelectedGuests(new Set());
+    } else {
+      setSelectedGuests(new Set(filteredGuests.map(g => g.id)));
+    }
+  };
+
+  // Bulk delete selected guests
+  const handleBulkDelete = async () => {
+    if (selectedGuests.size === 0) return;
+
+    if (!confirm(`Are you sure you want to delete ${selectedGuests.size} selected guest(s)?`)) {
+      return;
+    }
+
+    try {
+      const deletePromises = Array.from(selectedGuests).map(guestId =>
+        fetch(`/api/guests?id=${guestId}`, { method: 'DELETE' })
+      );
+
+      await Promise.all(deletePromises);
+      toast.success(`Deleted ${selectedGuests.size} guest(s) successfully`);
+      setSelectedGuests(new Set());
+      fetchGuests();
+    } catch (error) {
+      toast.error('Failed to delete some guests');
+    }
+  };
+
+  // Bulk assign to table
+  const handleBulkAssign = async (tableId: string) => {
+    if (selectedGuests.size === 0) return;
+
+    try {
+      const updatePromises = Array.from(selectedGuests).map(guestId => {
+        const guest = guests.find(g => g.id === guestId);
+        if (!guest) return Promise.resolve();
+
+        return fetch('/api/guests', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: guestId, tableId: tableId || null }),
+        });
+      });
+
+      await Promise.all(updatePromises);
+      toast.success(`Assigned ${selectedGuests.size} guest(s) to table`);
+      setSelectedGuests(new Set());
+      setShowBulkActions(false);
+      fetchGuests();
+    } catch (error) {
+      toast.error('Failed to assign some guests');
+    }
+  };
+
   if (loading) {
     return (
-      <div className="text-center py-12">
-        <div className="w-8 h-8 border-4 border-yellow-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-        <p className={text.body}>Loading guest list...</p>
+      <div className={themeConfig.loading.container}>
+        <div className={`w-8 h-8 border-4 border-t-transparent rounded-full animate-spin mx-auto mb-4 ${themeConfig.loading.spinner}`} />
+        <p className={themeConfig.loading.text}>Loading guest list...</p>
       </div>
     );
   }
@@ -219,18 +308,18 @@ export default function GuestList() {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h2 className={`text-2xl ${text.heading}`}>Guest Management</h2>
+        <h2 className={`text-2xl ${themeConfig.text.heading}`}>Guest Management</h2>
         <div className="flex gap-2">
           <button
             onClick={() => setShowImport(true)}
-            className={`inline-flex items-center gap-2 ${button.secondary}`}
+            className={`inline-flex items-center gap-2 ${themeConfig.button.secondary}`}
           >
             <Upload className="w-4 h-4" />
             Import CSV
           </button>
           <button
             onClick={() => setShowAddGuest(true)}
-            className={`inline-flex items-center gap-2 ${button.primary}`}
+            className={`inline-flex items-center gap-2 ${themeConfig.button.primary}`}
           >
             <Plus className="w-4 h-4" />
             Add Guest
@@ -239,73 +328,143 @@ export default function GuestList() {
       </div>
 
       {/* Search */}
-      <div className="bg-white rounded-lg shadow p-4">
+      <div className={themeConfig.card}>
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+          <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 ${themeConfig.icon.color.secondary}`} />
           <input
             type="text"
             placeholder="Search guests by name, phone, or address..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className={`${input} pl-10 pr-4`}
+            className={`${themeConfig.input} pl-10 pr-4`}
           />
         </div>
       </div>
 
-      {/* Guest List */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h3 className={`text-lg font-semibold ${text.body}`}>
-            Guests ({filteredGuests.length} of {guests.length})
-          </h3>
-        </div>
-        <div className="divide-y divide-gray-200">
-          {filteredGuests.map((guest) => (
-            <div key={guest.id} className="p-6 hover:bg-gray-50">
-              <div className="flex items-center justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-2">
-                    <User className="w-5 h-5 text-gray-400" />
-                    <h4 className={`text-lg font-medium ${text.body}`}>{guest.name}</h4>
-                    {guest.partySize > 1 && (
-                      <span className="text-xs bg-amber-200 text-amber-800 px-2 py-1 rounded-full flex items-center gap-1">
-                        <Users className="w-3 h-3" />
-                        {guest.partySize}
-                      </span>
-                    )}
-                    <span className={`px-2 py-1 text-xs rounded-full ${
-                      guest.tableId
-                        ? 'bg-green-100 text-green-800'
-                        : 'bg-yellow-100 text-yellow-800'
-                    }`}>
-                      {getTableName(guest.tableId)}
-                    </span>
+      {/* Bulk Actions Bar */}
+      {selectedGuests.size > 0 && (
+        <div className={`${themeConfig.card} bg-emerald-50`}>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <span className={`font-medium ${themeConfig.text.body}`}>
+                {selectedGuests.size} guest(s) selected ({getTotalPeople(guests.filter(g => selectedGuests.has(g.id)))}{' '}
+                people)
+              </span>
+              <button
+                onClick={() => setSelectedGuests(new Set())}
+                className={themeConfig.button.tertiary}
+              >
+                Clear Selection
+              </button>
+            </div>
+            <div className="flex gap-2">
+              <div className="relative bulk-actions-dropdown">
+                <button
+                  onClick={() => setShowBulkActions(!showBulkActions)}
+                  className={themeConfig.button.secondary}
+                >
+                  Assign to Table
+                </button>
+                {showBulkActions && (
+                  <div className={`absolute right-0 mt-2 w-48 ${themeConfig.classes.bgCard} ${themeConfig.classes.borderDefault} rounded-lg shadow-lg z-10 max-h-64 overflow-y-auto`}>
+                    <div className="py-1">
+                      <button
+                        onClick={() => handleBulkAssign('')}
+                        className={`w-full text-left px-4 py-2 ${themeConfig.text.body} hover:bg-stone-50`}
+                      >
+                        Unassign
+                      </button>
+                      {tables.map(table => (
+                        <button
+                          key={table.id}
+                          onClick={() => handleBulkAssign(table.id)}
+                          className={`w-full text-left px-4 py-2 ${themeConfig.text.body} hover:bg-stone-50`}
+                        >
+                          {table.name}
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                  <div className={`flex items-center gap-6 text-sm ${text.body}`}>
-                    {guest.phoneNumber && (
-                      <div className="flex items-center gap-1">
-                        <Phone className="w-4 h-4" />
-                        <span>{guest.phoneNumber}</span>
-                      </div>
-                    )}
-                    {guest.address && (
-                      <div className="flex items-center gap-1">
-                        <MapPin className="w-4 h-4" />
-                        <span className="truncate max-w-xs">{guest.address}</span>
-                      </div>
-                    )}
+                )}
+              </div>
+              <button
+                onClick={handleBulkDelete}
+                className={themeConfig.button.danger}
+              >
+                <Trash2 className="w-4 h-4" />
+                Delete Selected
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Guest List */}
+      <div className={themeConfig.card}>
+        <div className={`px-6 py-4 border-b ${themeConfig.classes.borderDefault} flex items-center justify-between`}>
+          <div className="flex items-center gap-4">
+            <input
+              type="checkbox"
+              checked={selectedGuests.size > 0 && selectedGuests.size === filteredGuests.length}
+              onChange={selectAllGuests}
+              className="w-4 h-4 rounded border-stone-300 text-emerald-600 focus:ring-emerald-500"
+            />
+            <h3 className={`text-lg font-semibold ${themeConfig.text.body}`}>
+              Guests: {filteredGuests.length} entries ({getTotalPeople(filteredGuests)} people) of {guests.length} entries ({getTotalPeople(guests)} total people)
+            </h3>
+          </div>
+        </div>
+        <div className={`divide-y ${themeConfig.classes.borderDefault}`}>
+          {filteredGuests.map((guest) => (
+            <div key={guest.id} className={themeConfig.listItem.default}>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4 flex-1">
+                  <input
+                    type="checkbox"
+                    checked={selectedGuests.has(guest.id)}
+                    onChange={() => toggleSelectGuest(guest.id)}
+                    className="w-4 h-4 rounded border-stone-300 text-emerald-600 focus:ring-emerald-500"
+                  />
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-2">
+                      <User className={`w-5 h-5 ${themeConfig.icon.color.secondary}`} />
+                      <h4 className={`text-lg font-medium ${themeConfig.text.body}`}>{guest.name}</h4>
+                      {guest.partySize > 1 && (
+                        <span className={`${themeConfig.badge.partySize} flex items-center gap-1`}>
+                          <Users className="w-3 h-3" />
+                          {guest.partySize}
+                        </span>
+                      )}
+                      <span className={guest.tableId ? themeConfig.badge.assigned : themeConfig.badge.unassigned}>
+                        {getTableName(guest.tableId)}
+                      </span>
+                    </div>
+                    <div className={`flex items-center gap-6 text-sm ${themeConfig.text.body}`}>
+                      {guest.phoneNumber && (
+                        <div className="flex items-center gap-1">
+                          <Phone className="w-4 h-4" />
+                          <span>{guest.phoneNumber}</span>
+                        </div>
+                      )}
+                      {guest.address && (
+                        <div className="flex items-center gap-1">
+                          <MapPin className="w-4 h-4" />
+                          <span className="truncate max-w-xs">{guest.address}</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => setEditingGuest(guest)}
-                    className="p-2 text-gray-500 hover:text-blue-500 hover:bg-blue-50 rounded transition-colors"
+                    className={themeConfig.button.edit}
                   >
                     <Edit className="w-4 h-4" />
                   </button>
                   <button
                     onClick={() => handleDeleteGuest(guest.id)}
-                    className="p-2 text-gray-500 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
+                    className={themeConfig.button.delete}
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -314,7 +473,7 @@ export default function GuestList() {
             </div>
           ))}
           {filteredGuests.length === 0 && (
-            <div className={`p-12 text-center ${text.muted}`}>
+            <div className={`p-12 text-center ${themeConfig.text.muted}`}>
               {searchTerm ? 'No guests found matching your search.' : 'No guests added yet.'}
             </div>
           )}
@@ -323,48 +482,48 @@ export default function GuestList() {
 
       {/* Add Guest Modal */}
       {showAddGuest && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
-            <h3 className="text-lg font-semibold mb-4">Add New Guest</h3>
+        <div className={themeConfig.modal.overlay}>
+          <div className={themeConfig.modal.container}>
+            <h3 className={themeConfig.modal.title}>Add New Guest</h3>
             <form onSubmit={handleAddGuest} className="space-y-4">
               <div>
-                <label className={`block ${text.label} mb-1`}>
+                <label className={`block ${themeConfig.text.label} mb-1`}>
                   Name *
                 </label>
                 <input
                   type="text"
                   value={newGuest.name}
                   onChange={(e) => setNewGuest({ ...newGuest, name: e.target.value })}
-                  className={input}
+                  className={themeConfig.input}
                   required
                 />
               </div>
 
               <div>
-                <label className={`block ${text.label} mb-1`}>
+                <label className={`block ${themeConfig.text.label} mb-1`}>
                   Phone Number
                 </label>
                 <input
                   type="text"
                   value={newGuest.phoneNumber}
                   onChange={(e) => setNewGuest({ ...newGuest, phoneNumber: e.target.value })}
-                  className={input}
+                  className={themeConfig.input}
                 />
               </div>
 
               <div>
-                <label className={`block ${text.label} mb-1`}>
+                <label className={`block ${themeConfig.text.label} mb-1`}>
                   Address
                 </label>
                 <textarea
                   value={newGuest.address}
                   onChange={(e) => setNewGuest({ ...newGuest, address: e.target.value })}
-                  className={`${input} h-20`}
+                  className={`${themeConfig.input} h-20`}
                 />
               </div>
 
               <div>
-                <label className={`block ${text.label} mb-1`}>
+                <label className={`block ${themeConfig.text.label} mb-1`}>
                   Party Size *
                 </label>
                 <input
@@ -373,19 +532,19 @@ export default function GuestList() {
                   max="10"
                   value={newGuest.partySize}
                   onChange={(e) => setNewGuest({ ...newGuest, partySize: parseInt(e.target.value) || 1 })}
-                  className={input}
+                  className={themeConfig.input}
                   required
                 />
               </div>
 
               <div>
-                <label className={`block ${text.label} mb-1`}>
+                <label className={`block ${themeConfig.text.label} mb-1`}>
                   Assign to Table
                 </label>
                 <select
                   value={newGuest.tableId}
                   onChange={(e) => setNewGuest({ ...newGuest, tableId: e.target.value })}
-                  className={input}
+                  className={themeConfig.input}
                 >
                   <option value="">Unassigned</option>
                   {tables.map((table) => (
@@ -399,14 +558,14 @@ export default function GuestList() {
               <div className="flex gap-3 pt-4">
                 <button
                   type="submit"
-                  className={`flex-1 ${button.primary}`}
+                  className={`flex-1 ${themeConfig.button.primary}`}
                 >
                   Add Guest
                 </button>
                 <button
                   type="button"
                   onClick={() => setShowAddGuest(false)}
-                  className={button.secondary}
+                  className={themeConfig.button.secondary}
                 >
                   Cancel
                 </button>
@@ -418,48 +577,48 @@ export default function GuestList() {
 
       {/* Edit Guest Modal */}
       {editingGuest && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
-            <h3 className="text-lg font-semibold mb-4">Edit Guest</h3>
+        <div className={themeConfig.modal.overlay}>
+          <div className={themeConfig.modal.container}>
+            <h3 className={themeConfig.modal.title}>Edit Guest</h3>
             <form onSubmit={handleEditGuest} className="space-y-4">
               <div>
-                <label className={`block ${text.label} mb-1`}>
+                <label className={`block ${themeConfig.text.label} mb-1`}>
                   Name *
                 </label>
                 <input
                   type="text"
                   value={editingGuest.name}
                   onChange={(e) => setEditingGuest({ ...editingGuest, name: e.target.value })}
-                  className={input}
+                  className={themeConfig.input}
                   required
                 />
               </div>
 
               <div>
-                <label className={`block ${text.label} mb-1`}>
+                <label className={`block ${themeConfig.text.label} mb-1`}>
                   Phone Number
                 </label>
                 <input
                   type="text"
                   value={editingGuest.phoneNumber || ''}
                   onChange={(e) => setEditingGuest({ ...editingGuest, phoneNumber: e.target.value })}
-                  className={input}
+                  className={themeConfig.input}
                 />
               </div>
 
               <div>
-                <label className={`block ${text.label} mb-1`}>
+                <label className={`block ${themeConfig.text.label} mb-1`}>
                   Address
                 </label>
                 <textarea
                   value={editingGuest.address || ''}
                   onChange={(e) => setEditingGuest({ ...editingGuest, address: e.target.value })}
-                  className={`${input} h-20`}
+                  className={`${themeConfig.input} h-20`}
                 />
               </div>
 
               <div>
-                <label className={`block ${text.label} mb-1`}>
+                <label className={`block ${themeConfig.text.label} mb-1`}>
                   Party Size *
                 </label>
                 <input
@@ -468,19 +627,19 @@ export default function GuestList() {
                   max="10"
                   value={editingGuest.partySize}
                   onChange={(e) => setEditingGuest({ ...editingGuest, partySize: parseInt(e.target.value) || 1 })}
-                  className={input}
+                  className={themeConfig.input}
                   required
                 />
               </div>
 
               <div>
-                <label className={`block ${text.label} mb-1`}>
+                <label className={`block ${themeConfig.text.label} mb-1`}>
                   Assign to Table
                 </label>
                 <select
                   value={editingGuest.tableId || ''}
                   onChange={(e) => setEditingGuest({ ...editingGuest, tableId: e.target.value || null })}
-                  className={input}
+                  className={themeConfig.input}
                 >
                   <option value="">Unassigned</option>
                   {tables.map((table) => (
@@ -494,14 +653,14 @@ export default function GuestList() {
               <div className="flex gap-3 pt-4">
                 <button
                   type="submit"
-                  className={`flex-1 ${button.primary}`}
+                  className={`flex-1 ${themeConfig.button.primary}`}
                 >
                   Save Changes
                 </button>
                 <button
                   type="button"
                   onClick={() => setEditingGuest(null)}
-                  className={button.secondary}
+                  className={themeConfig.button.secondary}
                 >
                   Cancel
                 </button>
@@ -513,12 +672,12 @@ export default function GuestList() {
 
       {/* Import Modal */}
       {showImport && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
-            <h3 className="text-lg font-semibold mb-4">Import Guest List</h3>
+        <div className={themeConfig.modal.overlay}>
+          <div className={themeConfig.modal.container}>
+            <h3 className={themeConfig.modal.title}>Import Guest List</h3>
             <div className="space-y-4">
               <div>
-                <p className={`text-sm ${text.muted} mb-4`}>
+                <p className={`text-sm ${themeConfig.text.muted} mb-4`}>
                   Upload a CSV file with columns: <strong>name</strong>, <strong>phoneNumber</strong>, <strong>address</strong>
                 </p>
                 <input
@@ -526,7 +685,7 @@ export default function GuestList() {
                   type="file"
                   accept=".csv"
                   onChange={handleFileUpload}
-                  className={input}
+                  className={themeConfig.input}
                 />
               </div>
 
@@ -534,7 +693,7 @@ export default function GuestList() {
                 <button
                   type="button"
                   onClick={() => setShowImport(false)}
-                  className={`flex-1 ${button.secondary}`}
+                  className={`flex-1 ${themeConfig.button.secondary}`}
                 >
                   Cancel
                 </button>

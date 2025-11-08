@@ -2,6 +2,7 @@
 
 import React, { useEffect } from 'react';
 import { CheckCircle, XCircle, AlertCircle, Info, X } from 'lucide-react';
+import { theme } from '@/lib/theme';
 
 export type ToastType = 'success' | 'error' | 'warning' | 'info';
 
@@ -20,18 +21,19 @@ const toastIcons = {
   info: Info,
 };
 
+// Toast styles now use centralized theme
 const toastStyles = {
-  success: 'bg-green-50 border-green-500 text-green-900',
-  error: 'bg-red-50 border-red-500 text-red-900',
-  warning: 'bg-yellow-50 border-yellow-500 text-yellow-900',
-  info: 'bg-blue-50 border-blue-500 text-blue-900',
+  success: `${theme.semantic.success.bg} ${theme.semantic.success.border} ${theme.semantic.success.text}`,
+  error: `${theme.semantic.error.bg} ${theme.semantic.error.border} ${theme.semantic.error.text}`,
+  warning: `${theme.semantic.warning.bg} ${theme.semantic.warning.border} ${theme.semantic.warning.text}`,
+  info: `${theme.semantic.info.bg} ${theme.semantic.info.border} ${theme.semantic.info.text}`,
 };
 
 const iconStyles = {
-  success: 'text-green-500',
-  error: 'text-red-500',
-  warning: 'text-yellow-500',
-  info: 'text-blue-500',
+  success: theme.semantic.success.icon,
+  error: theme.semantic.error.icon,
+  warning: theme.semantic.warning.icon,
+  info: theme.semantic.info.icon,
 };
 
 export function Toast({ id, type, message, duration = 5000, onClose }: ToastProps) {
@@ -56,7 +58,7 @@ export function Toast({ id, type, message, duration = 5000, onClose }: ToastProp
       <p className="flex-1 text-sm font-medium">{message}</p>
       <button
         onClick={() => onClose(id)}
-        className="flex-shrink-0 text-gray-400 hover:text-gray-600 transition-colors"
+        className={`flex-shrink-0 ${theme.components.icon.secondary} hover:${theme.components.icon.primary} transition-colors`}
         aria-label="Close notification"
       >
         <X className="w-4 h-4" />

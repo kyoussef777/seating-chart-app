@@ -46,24 +46,24 @@ export default function LoginPage() {
   return (
     <div className={`min-h-screen ${themeConfig.page} flex items-center justify-center p-4`}>
       <div className="max-w-md w-full">
-        <div className="bg-white rounded-2xl shadow-xl p-8 border border-rose-100">
+        <div className={`bg-white rounded-2xl shadow-xl p-8 ${themeConfig.classes.borderBeige}`}>
           <div className="text-center mb-8">
-            <div className="mx-auto w-16 h-16 bg-gradient-to-br from-yellow-400 to-amber-600 rounded-full flex items-center justify-center mb-4">
-              <Heart className="w-8 h-8 text-white fill-current" />
+            <div className={`mx-auto w-16 h-16 ${themeConfig.icon.primary} mb-4`}>
+              <Heart className="w-8 h-8 fill-current" />
             </div>
-            <h1 className="text-2xl font-bold text-black mb-2">Admin Access</h1>
-            <p className="text-gray-600">Sign in to manage your event seating</p>
+            <h1 className={`text-2xl font-bold ${themeConfig.text.heading} mb-2`}>Admin Access</h1>
+            <p className={themeConfig.text.secondary}>Sign in to manage your event seating</p>
           </div>
 
           {error && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+            <div className={`mb-4 p-3 rounded-lg text-sm ${themeConfig.toast.error}`}>
               {error}
             </div>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label htmlFor="username" className="block text-sm font-medium text-black mb-1">
+              <label htmlFor="username" className={themeConfig.text.label}>
                 Username
               </label>
               <input
@@ -72,13 +72,13 @@ export default function LoginPage() {
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 required
-                className="w-full text-black px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 transition-colors"
+                className={themeConfig.input}
                 placeholder="Enter your username"
               />
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-black mb-1">
+              <label htmlFor="password" className={themeConfig.text.label}>
                 Password
               </label>
               <input
@@ -87,7 +87,7 @@ export default function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="w-full text-black px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 transition-colors"
+                className={themeConfig.input}
                 placeholder="Enter your password"
               />
             </div>
@@ -95,16 +95,16 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full bg-gradient-to-r from-yellow-500 to-amber-600 text-white py-3 px-4 rounded-lg font-medium hover:from-yellow-600 hover:to-amber-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+              className={`w-full ${themeConfig.button.primary} flex items-center justify-center gap-2`}
             >
               {isLoading ? (
                 <>
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  <div className={`w-4 h-4 border-2 ${themeConfig.text.white} border-t-transparent rounded-full animate-spin`} />
                   Signing in...
                 </>
               ) : (
                 <>
-                  <Lock className="w-4 h-4" />
+                  <Lock className={`w-4 h-4 ${themeConfig.text.white}`} />
                   Sign In
                 </>
               )}
@@ -112,7 +112,7 @@ export default function LoginPage() {
           </form>
 
           <div className="mt-6 text-center">
-            <Link href="/" className="text-amber-600 hover:text-rose-600 text-sm font-medium">
+            <Link href="/" className={`text-sm font-medium ${themeConfig.text.link}`}>
               ← Back to Guest Portal
             </Link>
           </div>

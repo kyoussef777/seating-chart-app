@@ -34,6 +34,26 @@ interface DraggableTableProps {
   onRotate: (tableId: string, rotation: number) => void;
 }
 
+// Get dimensions for each table shape
+const getTableDimensions = (shape: string) => {
+  switch (shape) {
+    case 'round':
+      return { width: 140, height: 140, isCircular: true };
+    case 'square':
+      return { width: 120, height: 120, isCircular: false };
+    case 'rectangular':
+      return { width: 180, height: 100, isCircular: false };
+    case 'oval':
+      return { width: 160, height: 100, isCircular: true };
+    case 'u-shape':
+      return { width: 200, height: 140, isCircular: false };
+    case 'cocktail':
+      return { width: 80, height: 80, isCircular: true };
+    default:
+      return { width: 140, height: 140, isCircular: true };
+  }
+};
+
 function DraggableTable({
   table,
   onDelete,
@@ -44,6 +64,7 @@ function DraggableTable({
   const themeConfig = useTheme();
   const [showGuestList, setShowGuestList] = useState(false);
   const popupRef = useRef<HTMLDivElement>(null);
+  const dimensions = getTableDimensions(table.shape);
 
   // Close popup when clicking outside
   useEffect(() => {
@@ -61,25 +82,22 @@ function DraggableTable({
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [showGuestList]);
+
   const [{ isDragging }, drag] = useDrag(() => ({
     type: 'table',
     item: () => {
-      console.log('Started dragging table:', table.id);
       return { id: table.id, type: 'table' };
     },
     collect: (monitor) => ({
       isDragging: monitor.isDragging(),
     }),
     canDrag: true,
-    end: (_, monitor) => {
-      console.log('Finished dragging table:', table.id, 'didDrop:', monitor.didDrop());
-    },
   }));
 
   const [{ isOver }, drop] = useDrop(() => ({
     accept: 'guest',
     drop: (item: { id: string; type: string }) => {
-      if (item.type === 'guest' && table.guests.length < table.capacity) {
+      if (item.type === 'guest') {
         onAssignGuest(item.id, table.id);
       }
     },
@@ -97,6 +115,8 @@ function DraggableTable({
     position: 'absolute' as const,
     left: `${table.positionX}px`,
     top: `${table.positionY}px`,
+    width: `${dimensions.width}px`,
+    height: `${dimensions.height}px`,
     opacity: isDragging ? 0.5 : 1,
     cursor: 'move',
     transform: `rotate(${table.rotation || 0}deg)`,
@@ -112,8 +132,23 @@ function DraggableTable({
   const isOval = table.shape === 'oval';
   const isCocktail = table.shape === 'cocktail';
   const isUShape = table.shape === 'u-shape';
+  const isRectangular = table.shape === 'rectangular';
 
-  const shouldUseCompactLayout = isRound || isSquare || isCocktail || isOval || isUShape;
+  const getBorderRadius = () => {
+    if (isRound || isCocktail) return '50%';
+    if (isOval) return '50%';
+    if (isUShape) return '12px 12px 4px 4px';
+    return '8px';
+  };
+
+  const getSpecialShape = () => {
+    if (isUShape) {
+      return (
+        <div className="absolute inset-x-0 bottom-0 h-1/3 bg-white border-t-2 border-emerald-600" />
+      );
+    }
+    return null;
+  };
 
   return (
     <div
@@ -121,61 +156,64 @@ function DraggableTable({
       style={tableStyle}
       className={cn(
         themeConfig.table.default,
-        'p-3 relative transition-all duration-200',
-        isRound ? 'rounded-full w-32 h-32 flex flex-col items-center justify-center' : 'rounded-lg',
+        'p-3 relative transition-all duration-200 flex flex-col items-center justify-center',
         isOver && !isFull ? themeConfig.table.dropTarget : '',
         isFull && isOver ? themeConfig.table.full : '',
         isDragging ? themeConfig.table.dragging : 'z-0'
       )}
+      style={{
+        ...tableStyle,
+        borderRadius: getBorderRadius(),
+      }}
     >
-      {/* Table Header */}
-      <div className={cn(
-        'flex items-center justify-between mb-2',
-        shouldUseCompactLayout ? 'flex-col text-center' : ''
-      )}>
-        <div
-          className={cn(
-            themeConfig.text.heading,
-            'flex-1',
-            shouldUseCompactLayout ? 'text-sm text-center' : 'text-base'
-          )}
+      {getSpecialShape()}
+
+      {/* Controls - Top Right Corner */}
+      <div className="absolute top-1 right-1 flex items-center gap-1 z-20">
+        <button
+          onMouseDown={(e) => e.stopPropagation()}
+          onClick={(e) => {
+            e.stopPropagation();
+            const newRotation = ((table.rotation || 0) + 90) % 360;
+            onRotate(table.id, newRotation);
+          }}
+          className={`${themeConfig.button.edit} flex-shrink-0`}
+          title="Rotate table"
         >
-          {table.name}
-        </div>
-        <div className="flex items-center gap-1">
-          <button
-            onMouseDown={(e) => e.stopPropagation()}
-            onClick={(e) => {
-              e.stopPropagation();
-              const newRotation = ((table.rotation || 0) + 90) % 360;
-              onRotate(table.id, newRotation);
-            }}
-            className="p-1 text-blue-500 hover:bg-blue-100 rounded transition-colors flex-shrink-0 z-10"
-            title="Rotate table"
-          >
-            <RotateCw className="w-3 h-3" />
-          </button>
-          <button
-            onMouseDown={(e) => e.stopPropagation()}
-            onClick={(e) => {
-              e.stopPropagation();
-              onDelete();
-            }}
-            className="p-1 text-red-500 hover:bg-red-100 rounded transition-colors flex-shrink-0 z-10"
-            title="Delete table"
-          >
-            <Trash2 className="w-3 h-3" />
-          </button>
-        </div>
+          <RotateCw className="w-3 h-3" />
+        </button>
+        <button
+          onMouseDown={(e) => e.stopPropagation()}
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete();
+          }}
+          className={`${themeConfig.button.delete} flex-shrink-0`}
+          title="Delete table"
+        >
+          <Trash2 className="w-3 h-3" />
+        </button>
+      </div>
+
+      {/* Table Name - Centered */}
+      <div
+        className={cn(
+          themeConfig.text.heading,
+          isCocktail ? 'text-xs text-center' : 'text-sm text-center font-bold mb-1'
+        )}
+      >
+        {table.name}
       </div>
 
       {/* Capacity Info - Click to show/hide guest list */}
       <div
         className={cn(
-          'flex items-center gap-1 text-xs mb-2 cursor-pointer transition-colors',
-          'text-black font-medium hover:text-yellow-700',
-          shouldUseCompactLayout ? 'justify-center' : '',
-          showGuestList && table.guests.length > 0 && 'text-yellow-700 font-semibold'
+          'flex items-center gap-1 cursor-pointer transition-colors',
+          themeConfig.text.body,
+          'font-medium',
+          isCocktail ? 'text-xs' : 'text-sm',
+          `hover:${themeConfig.icon.color.primary}`,
+          showGuestList && table.guests.length > 0 && `${themeConfig.icon.color.primary} font-semibold`
         )}
         onClick={(e) => {
           e.stopPropagation();
@@ -184,7 +222,7 @@ function DraggableTable({
           }
         }}
       >
-        <Users className="w-3 h-3" />
+        <Users className={isCocktail ? 'w-3 h-3' : 'w-4 h-4'} />
         <span>{seatsUsed}/{table.capacity}</span>
         {table.guests.length > 0 && (
           <span className="text-xs opacity-80 ml-1 font-normal">
@@ -193,15 +231,25 @@ function DraggableTable({
         )}
       </div>
 
-      {/* Guest List - Hidden by default, only show on click via popup */}
+      {/* Shape Indicator */}
+      <div className="text-xs opacity-60 mt-1">
+        {table.shape === 'round' && '⭕'}
+        {table.shape === 'square' && '⬜'}
+        {table.shape === 'rectangular' && '▬'}
+        {table.shape === 'oval' && '⬭'}
+        {table.shape === 'u-shape' && '⊓'}
+        {table.shape === 'cocktail' && '○'}
+      </div>
 
       {/* Drop Zone Indicator */}
       {isOver && (
-        <div className={cn(
-          'absolute inset-0 border-2 border-dashed rounded pointer-events-none',
-          shouldUseCompactLayout && (isRound || isCocktail || isOval) ? 'rounded-full' : 'rounded-lg',
-          !isFull ? 'border-green-400 bg-green-100 bg-opacity-50' : 'border-red-400 bg-red-100 bg-opacity-50'
-        )}>
+        <div
+          className={cn(
+            'absolute inset-0 border-2 border-dashed pointer-events-none',
+            !isFull ? 'border-green-400 bg-green-100 bg-opacity-50' : 'border-red-400 bg-red-100 bg-opacity-50'
+          )}
+          style={{ borderRadius: getBorderRadius() }}
+        >
           <div className="flex items-center justify-center h-full text-xs font-medium">
             {isFull ? 'Table Full!' : 'Drop Here'}
           </div>
@@ -210,15 +258,16 @@ function DraggableTable({
 
       {/* Guest Count Badge - Shows for all tables with guests */}
       {table.guests.length > 0 && (
-        <div className={cn(
-          'absolute -bottom-2 -right-2 text-xs rounded-full w-5 h-5 flex items-center justify-center transition-colors cursor-pointer',
-          'bg-yellow-500 text-black border border-yellow-600 hover:bg-yellow-400',
-          showGuestList && 'ring-2 ring-yellow-300'
-        )}
-        onClick={(e) => {
-          e.stopPropagation();
-          setShowGuestList(!showGuestList);
-        }}
+        <div
+          className={cn(
+            'absolute -bottom-2 -right-2 text-xs rounded-full w-6 h-6 flex items-center justify-center transition-colors cursor-pointer z-20',
+            themeConfig.badge.default,
+            showGuestList && `ring-2 ${themeConfig.badge.default.ring}`
+          )}
+          onClick={(e) => {
+            e.stopPropagation();
+            setShowGuestList(!showGuestList);
+          }}
         >
           {table.guests.length}
         </div>
@@ -229,12 +278,13 @@ function DraggableTable({
         <div
           ref={popupRef}
           className={cn(
-            'absolute left-full top-0 ml-2 p-3 rounded-lg shadow-lg z-50 min-w-[200px]',
-            'bg-white border-2 border-yellow-500'
+            'absolute left-full top-0 ml-2 p-3 rounded-lg shadow-xl z-50 min-w-[220px]',
+            `${themeConfig.classes.bgCard} border-2 ${themeConfig.classes.borderPrimary}`
           )}
+          onClick={(e) => e.stopPropagation()}
         >
           <div className="flex items-center justify-between mb-2">
-            <div className="font-bold text-sm text-black">
+            <div className={`font-bold text-sm ${themeConfig.text.heading}`}>
               {table.name} ({seatsUsed}/{table.capacity} seats)
             </div>
             <button
@@ -242,7 +292,7 @@ function DraggableTable({
                 e.stopPropagation();
                 setShowGuestList(false);
               }}
-              className="text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded p-1 transition-colors"
+              className={themeConfig.button.cancel}
             >
               <X className="w-3 h-3" />
             </button>
@@ -253,13 +303,13 @@ function DraggableTable({
                 key={guest.id}
                 className={cn(
                   'flex items-center justify-between text-sm p-2 rounded group transition-colors',
-                  'bg-yellow-50 border border-yellow-200 text-black font-medium'
+                  themeConfig.listItem.default
                 )}
               >
                 <div className="flex items-center gap-2 flex-1 min-w-0">
-                  <span className="truncate">{guest.name}</span>
+                  <span className={`truncate ${themeConfig.text.body}`}>{guest.name}</span>
                   {guest.partySize > 1 && (
-                    <span className="text-xs bg-amber-200 text-amber-800 px-1.5 py-0.5 rounded-full flex-shrink-0">
+                    <span className={`${themeConfig.badge.partySize} flex-shrink-0`}>
                       +{guest.partySize - 1}
                     </span>
                   )}
@@ -269,7 +319,7 @@ function DraggableTable({
                     e.stopPropagation();
                     onUnassignGuest(guest.id);
                   }}
-                  className="text-red-500 hover:bg-red-100 rounded p-1 transition-all flex-shrink-0"
+                  className={`${themeConfig.button.delete} flex-shrink-0`}
                   title="Remove from table"
                 >
                   <Trash2 className="w-3 h-3" />

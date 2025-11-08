@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Save, Settings as SettingsIcon, Eye, Heart } from 'lucide-react';
+import { useTheme } from '@/hooks/useTheme';
 
 interface EventSettings {
   id: string;
@@ -11,6 +12,7 @@ interface EventSettings {
 }
 
 export default function EventSettings() {
+  const themeConfig = useTheme();
   const [settings, setSettings] = useState<EventSettings>({
     id: '',
     eventName: 'Our Special Day',
@@ -72,8 +74,8 @@ export default function EventSettings() {
   if (loading) {
     return (
       <div className="text-center py-12">
-        <div className="w-8 h-8 border-4 border-rose-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-        <p className="text-black">Loading event settings...</p>
+        <div className={`w-8 h-8 border-4 ${themeConfig.loading.spinner} border-t-transparent rounded-full animate-spin mx-auto mb-4`} />
+        <p className={themeConfig.loading.text}>Loading event settings...</p>
       </div>
     );
   }
@@ -81,12 +83,12 @@ export default function EventSettings() {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-black">Event Settings</h2>
+        <h2 className={`text-2xl font-bold ${themeConfig.text.heading}`}>Event Settings</h2>
         <a
           href="/"
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+          className={`inline-flex items-center gap-2 px-4 py-2 ${themeConfig.button.secondary}`}
         >
           <Eye className="w-4 h-4" />
           Preview Guest Portal
@@ -95,15 +97,15 @@ export default function EventSettings() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Settings Form */}
-        <div className="bg-white rounded-lg shadow p-6">
+        <div className={themeConfig.card}>
           <div className="flex items-center gap-3 mb-6">
-            <SettingsIcon className="w-6 h-6 text-rose-500" />
-            <h3 className="text-lg font-semibold text-black">Configuration</h3>
+            <SettingsIcon className={`w-6 h-6 ${themeConfig.icon.color.primary}`} />
+            <h3 className={`text-lg font-semibold ${themeConfig.text.heading}`}>Configuration</h3>
           </div>
 
           <form onSubmit={handleSave} className="space-y-6">
             <div>
-              <label htmlFor="eventName" className="block text-sm font-medium text-black mb-2">
+              <label htmlFor="eventName" className={themeConfig.text.label}>
                 Event Name
               </label>
               <input
@@ -111,17 +113,17 @@ export default function EventSettings() {
                 id="eventName"
                 value={settings.eventName}
                 onChange={(e) => setSettings({ ...settings, eventName: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-rose-500 text-black"
+                className={themeConfig.input}
                 placeholder="e.g., Sarah & John's Wedding"
                 required
               />
-              <p className="text-xs text-black mt-1">
+              <p className={`text-xs ${themeConfig.text.muted} mt-1`}>
                 This will be displayed as the main heading on the guest portal
               </p>
             </div>
 
             <div>
-              <label htmlFor="homePageText" className="block text-sm font-medium text-black mb-2">
+              <label htmlFor="homePageText" className={themeConfig.text.label}>
                 Welcome Message
               </label>
               <textarea
@@ -129,37 +131,37 @@ export default function EventSettings() {
                 value={settings.homePageText}
                 onChange={(e) => setSettings({ ...settings, homePageText: e.target.value })}
                 rows={4}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-rose-500 text-black"
+                className={themeConfig.input}
                 placeholder="Enter a welcome message for your guests..."
                 required
               />
-              <p className="text-xs text-black mt-1">
+              <p className={`text-xs ${themeConfig.text.muted} mt-1`}>
                 This message will appear below the event name on the guest portal
               </p>
             </div>
 
-            <div className="flex items-center justify-between pt-4 border-t border-gray-200">
+            <div className={`flex items-center justify-between pt-4 border-t ${themeConfig.classes.borderDefault}`}>
               <div>
                 {settings.updatedAt && (
-                  <p className="text-xs text-black">
+                  <p className={`text-xs ${themeConfig.text.muted}`}>
                     Last updated: {new Date(settings.updatedAt).toLocaleString()}
                   </p>
                 )}
               </div>
               <div className="flex items-center gap-3">
                 {saved && (
-                  <span className="text-green-600 text-sm font-medium">
+                  <span className={`${themeConfig.theme.semantic.success.text} text-sm font-medium`}>
                     Settings saved!
                   </span>
                 )}
                 <button
                   type="submit"
                   disabled={saving}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-rose-500 text-white rounded-lg hover:bg-rose-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className={`inline-flex items-center gap-2 px-4 py-2 ${themeConfig.button.primary}`}
                 >
                   {saving ? (
                     <>
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      <div className={`w-4 h-4 border-2 ${themeConfig.text.white} border-t-transparent rounded-full animate-spin`} />
                       Saving...
                     </>
                   ) : (
@@ -175,34 +177,34 @@ export default function EventSettings() {
         </div>
 
         {/* Live Preview */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-lg font-semibold text-black mb-6 flex items-center gap-2">
-            <Eye className="w-5 h-5 text-rose-500" />
+        <div className={themeConfig.card}>
+          <h3 className={`text-lg font-semibold ${themeConfig.text.heading} mb-6 flex items-center gap-2`}>
+            <Eye className={`w-5 h-5 ${themeConfig.icon.color.primary}`} />
             Live Preview
           </h3>
 
-          <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 bg-gradient-to-br from-pink-50 via-white to-rose-50">
+          <div className={`border-2 border-dashed ${themeConfig.classes.borderDefault} rounded-lg p-4 ${themeConfig.theme.gradient.floral}`}>
             <div className="text-center">
-              <div className="mx-auto w-12 h-12 bg-gradient-to-br from-pink-400 to-rose-500 rounded-full flex items-center justify-center mb-3">
-                <Heart className="w-6 h-6 text-white fill-current" />
+              <div className={`mx-auto w-12 h-12 ${themeConfig.icon.primary} mb-3`}>
+                <Heart className="w-6 h-6 fill-current" />
               </div>
-              <h1 className="text-2xl font-bold text-black mb-2">
+              <h1 className={`text-2xl font-bold ${themeConfig.text.heading} mb-2`}>
                 {settings.eventName || 'Your Event Name'}
               </h1>
-              <p className="text-black">
+              <p className={themeConfig.text.body}>
                 {settings.homePageText || 'Your welcome message will appear here'}
               </p>
             </div>
 
-            <div className="mt-6 bg-white rounded-lg shadow p-4 border border-rose-100">
+            <div className={`mt-6 bg-white rounded-lg shadow p-4 ${themeConfig.classes.borderBeige}`}>
               <div className="text-center">
-                <p className="text-sm text-black mb-2">Guest Search Form</p>
-                <div className="bg-gray-100 rounded-lg p-3 text-sm text-black">
+                <p className={`text-sm ${themeConfig.text.body} mb-2`}>Guest Search Form</p>
+                <div className={`${themeConfig.theme.secondary[100]} rounded-lg p-3 text-sm ${themeConfig.text.body}`}>
                   Enter Your Name
-                  <div className="mt-2 bg-white rounded border px-3 py-2 text-left text-black">
+                  <div className={`mt-2 bg-white rounded border px-3 py-2 text-left ${themeConfig.text.body}`}>
                     Type your full name...
                   </div>
-                  <button className="mt-2 w-full bg-gradient-to-r from-pink-500 to-rose-500 text-white py-2 px-4 rounded-lg text-sm">
+                  <button className={`mt-2 w-full ${themeConfig.button.primary} text-sm`}>
                     Find My Table
                   </button>
                 </div>
@@ -210,8 +212,8 @@ export default function EventSettings() {
             </div>
           </div>
 
-          <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-            <p className="text-blue-800 text-sm">
+          <div className={`mt-4 p-3 ${themeConfig.toast.info}`}>
+            <p className="text-sm">
               <strong>💡 Tip:</strong> Changes are saved automatically and will be visible to guests immediately on the portal.
             </p>
           </div>
@@ -219,24 +221,24 @@ export default function EventSettings() {
       </div>
 
       {/* Quick Stats */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-lg font-semibold text-black mb-4">Quick Information</h3>
+      <div className={themeConfig.card}>
+        <h3 className={`text-lg font-semibold ${themeConfig.text.heading} mb-4`}>Quick Information</h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="bg-gradient-to-br from-pink-50 to-rose-50 rounded-lg p-4 border border-rose-100">
-            <h4 className="font-medium text-black mb-1">Guest Portal URL</h4>
-            <p className="text-sm text-black break-all">
+          <div className={`${themeConfig.theme.gradient.floral} rounded-lg p-4 ${themeConfig.classes.borderBeige}`}>
+            <h4 className={`font-medium ${themeConfig.text.heading} mb-1`}>Guest Portal URL</h4>
+            <p className={`text-sm ${themeConfig.text.body} break-all`}>
               {typeof window !== 'undefined' ? window.location.origin : 'Your domain'}
             </p>
           </div>
-          <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-4 border border-blue-100">
-            <h4 className="font-medium text-black mb-1">Admin Portal URL</h4>
-            <p className="text-sm text-black break-all">
+          <div className={`${themeConfig.theme.gradient.floral} rounded-lg p-4 ${themeConfig.classes.borderBeige}`}>
+            <h4 className={`font-medium ${themeConfig.text.heading} mb-1`}>Admin Portal URL</h4>
+            <p className={`text-sm ${themeConfig.text.body} break-all`}>
               {typeof window !== 'undefined' ? `${window.location.origin}/admin` : 'Your domain/admin'}
             </p>
           </div>
-          <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg p-4 border border-green-100">
-            <h4 className="font-medium text-black mb-1">CSV Import Format</h4>
-            <p className="text-sm text-black">
+          <div className={`${themeConfig.theme.gradient.floral} rounded-lg p-4 ${themeConfig.classes.borderBeige}`}>
+            <h4 className={`font-medium ${themeConfig.text.heading} mb-1`}>CSV Import Format</h4>
+            <p className={`text-sm ${themeConfig.text.body}`}>
               Columns: name, phoneNumber, address
             </p>
           </div>

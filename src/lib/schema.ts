@@ -52,3 +52,46 @@ export type NewTable = typeof tables.$inferInsert;
 
 export type Guest = typeof guests.$inferSelect;
 export type NewGuest = typeof guests.$inferInsert;
+
+export const labels = pgTable('labels', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  text: text('text').notNull(),
+  x: real('x').notNull().default(0),
+  y: real('y').notNull().default(0),
+  fontSize: integer('font_size').notNull().default(16),
+  rotation: real('rotation').notNull().default(0),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+export const shapes = pgTable('shapes', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  type: varchar('type', { length: 20 }).notNull(), // 'rectangle', 'circle', 'line'
+  x: real('x').notNull().default(0),
+  y: real('y').notNull().default(0),
+  width: real('width').notNull().default(100),
+  height: real('height').notNull().default(100),
+  rotation: real('rotation').notNull().default(0),
+  color: varchar('color', { length: 50 }).notNull().default('#000000'),
+  label: text('label'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+export const referenceObjects = pgTable('reference_objects', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  type: varchar('type', { length: 20 }).notNull(), // 'danceFloor', 'bar', 'buffet', etc.
+  x: real('x').notNull().default(0),
+  y: real('y').notNull().default(0),
+  width: real('width').notNull().default(100),
+  height: real('height').notNull().default(100),
+  rotation: real('rotation').notNull().default(0),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+export type Label = typeof labels.$inferSelect;
+export type NewLabel = typeof labels.$inferInsert;
+
+export type Shape = typeof shapes.$inferSelect;
+export type NewShape = typeof shapes.$inferInsert;
+
+export type ReferenceObject = typeof referenceObjects.$inferSelect;
+export type NewReferenceObject = typeof referenceObjects.$inferInsert;

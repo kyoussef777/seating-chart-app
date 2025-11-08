@@ -163,8 +163,9 @@ export default function UserManagement() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-gray-500">Loading users...</div>
+      <div className={themeConfig.loading.container}>
+        <div className={`w-8 h-8 border-4 border-t-transparent rounded-full animate-spin mx-auto mb-4 ${themeConfig.loading.spinner}`} />
+        <p className={themeConfig.loading.text}>Loading users...</p>
       </div>
     );
   }
@@ -174,7 +175,7 @@ export default function UserManagement() {
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h2 className={`text-2xl font-bold ${themeConfig.text.heading}`}>User Management</h2>
-          <p className="text-gray-600 mt-1">Manage admin users who can access the dashboard</p>
+          <p className={themeConfig.text.muted}>Manage admin users who can access the dashboard</p>
         </div>
         <button
           onClick={() => setAddingNew(true)}
@@ -186,28 +187,28 @@ export default function UserManagement() {
       </div>
 
       {/* Excel-like table */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+      <div className={`${themeConfig.card} overflow-hidden`}>
         <table className="w-full">
           <thead>
-            <tr className="bg-gray-50 border-b border-gray-200">
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider w-1/3">
+            <tr className={`${themeConfig.theme.secondary[50]} border-b ${themeConfig.classes.borderDefault}`}>
+              <th className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider w-1/3 ${themeConfig.text.muted}`}>
                 Username
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider w-1/3">
+              <th className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider w-1/3 ${themeConfig.text.muted}`}>
                 Password
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider w-1/4">
+              <th className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider w-1/4 ${themeConfig.text.muted}`}>
                 Created At
               </th>
-              <th className="px-6 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider w-24">
+              <th className={`px-6 py-3 text-center text-xs font-medium uppercase tracking-wider w-24 ${themeConfig.text.muted}`}>
                 Actions
               </th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-200">
+          <tbody className={`divide-y ${themeConfig.classes.borderDefault}`}>
             {/* Add new user row */}
             {addingNew && (
-              <tr className="bg-blue-50">
+              <tr className={themeConfig.theme.secondary[100]}>
                 <td className="px-6 py-3">
                   <input
                     type="text"
@@ -229,20 +230,20 @@ export default function UserManagement() {
                     />
                     <button
                       onClick={() => setShowPassword(prev => ({ ...prev, new: !prev['new'] }))}
-                      className="p-2 text-gray-400 hover:text-gray-600"
+                      className={themeConfig.button.cancel}
                     >
                       {showPassword['new'] ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
                   </div>
                 </td>
-                <td className="px-6 py-3 text-sm text-gray-500">
+                <td className={`px-6 py-3 text-sm ${themeConfig.text.muted}`}>
                   New user
                 </td>
                 <td className="px-6 py-3">
                   <div className="flex items-center justify-center gap-2">
                     <button
                       onClick={handleAddUser}
-                      className="p-1.5 text-green-600 hover:bg-green-100 rounded transition-colors"
+                      className={themeConfig.button.confirm}
                       title="Save"
                     >
                       <Check className="w-4 h-4" />
@@ -252,7 +253,7 @@ export default function UserManagement() {
                         setAddingNew(false);
                         setNewUser({ username: '', password: '' });
                       }}
-                      className="p-1.5 text-red-600 hover:bg-red-100 rounded transition-colors"
+                      className={themeConfig.button.delete}
                       title="Cancel"
                     >
                       <X className="w-4 h-4" />
@@ -269,7 +270,7 @@ export default function UserManagement() {
               return (
                 <tr
                   key={user.id}
-                  className={`hover:bg-gray-50 transition-colors ${isEditing ? 'bg-yellow-50' : ''}`}
+                  className={`transition-colors ${themeConfig.listItem.hover} ${isEditing ? themeConfig.theme.secondary[100] : ''}`}
                 >
                   <td className="px-6 py-3">
                     {isEditing ? (
@@ -282,7 +283,7 @@ export default function UserManagement() {
                       />
                     ) : (
                       <div className="flex items-center gap-2">
-                        <span className="font-medium text-gray-900">{user.username}</span>
+                        <span className={`font-medium ${themeConfig.text.body}`}>{user.username}</span>
                       </div>
                     )}
                   </td>
@@ -298,16 +299,16 @@ export default function UserManagement() {
                         />
                         <button
                           onClick={() => setShowPassword(prev => ({ ...prev, [user.id]: !prev[user.id] }))}
-                          className="p-2 text-gray-400 hover:text-gray-600"
+                          className={themeConfig.button.cancel}
                         >
                           {showPassword[user.id] ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                         </button>
                       </div>
                     ) : (
-                      <span className="text-gray-500 text-sm">••••••••</span>
+                      <span className={`text-sm ${themeConfig.text.muted}`}>••••••••</span>
                     )}
                   </td>
-                  <td className="px-6 py-3 text-sm text-gray-600">
+                  <td className={`px-6 py-3 text-sm ${themeConfig.text.muted}`}>
                     {new Date(user.createdAt).toLocaleDateString('en-US', {
                       year: 'numeric',
                       month: 'short',
@@ -322,14 +323,14 @@ export default function UserManagement() {
                         <>
                           <button
                             onClick={handleSaveEdit}
-                            className="p-1.5 text-green-600 hover:bg-green-100 rounded transition-colors"
+                            className={themeConfig.button.confirm}
                             title="Save changes"
                           >
                             <Save className="w-4 h-4" />
                           </button>
                           <button
                             onClick={handleCancelEdit}
-                            className="p-1.5 text-gray-600 hover:bg-gray-100 rounded transition-colors"
+                            className={themeConfig.button.cancel}
                             title="Cancel"
                           >
                             <X className="w-4 h-4" />
@@ -339,14 +340,14 @@ export default function UserManagement() {
                         <>
                           <button
                             onClick={() => handleStartEdit(user)}
-                            className="p-1.5 text-blue-600 hover:bg-blue-100 rounded transition-colors"
+                            className={themeConfig.button.edit}
                             title="Edit user"
                           >
                             <Save className="w-4 h-4" />
                           </button>
                           <button
                             onClick={() => handleDeleteUser(user.id)}
-                            className="p-1.5 text-red-600 hover:bg-red-100 rounded transition-colors"
+                            className={themeConfig.button.delete}
                             title="Delete user"
                           >
                             <Trash2 className="w-4 h-4" />
@@ -361,7 +362,7 @@ export default function UserManagement() {
 
             {users.length === 0 && !addingNew && (
               <tr>
-                <td colSpan={4} className="px-6 py-12 text-center text-gray-500">
+                <td colSpan={4} className={`px-6 py-12 text-center ${themeConfig.text.muted}`}>
                   No users found. Click &ldquo;Add User&rdquo; to create one.
                 </td>
               </tr>
@@ -370,7 +371,7 @@ export default function UserManagement() {
         </table>
       </div>
 
-      <div className="mt-4 text-sm text-gray-600">
+      <div className={`mt-4 text-sm ${themeConfig.text.muted}`}>
         <p>• Password requirements: Minimum 8 characters</p>
         <p>• Username requirements: Minimum 3 characters, must be unique</p>
         <p>• Cannot delete the last admin user</p>

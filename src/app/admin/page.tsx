@@ -64,10 +64,10 @@ export default function AdminPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className={themeConfig.loading.container}>
         <div className="text-center">
-          <div className="w-8 h-8 border-4 border-yellow-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-black">Loading admin panel...</p>
+          <div className={`w-8 h-8 border-4 ${themeConfig.loading.spinner} border-t-transparent rounded-full animate-spin mx-auto mb-4`} />
+          <p className={themeConfig.loading.text}>Loading admin panel...</p>
         </div>
       </div>
     );
@@ -86,17 +86,17 @@ export default function AdminPage() {
 
   return (
     <DndProvider backend={HTML5Backend}>
-      <div className="min-h-screen bg-gray-50">
-        <header className="bg-white border-b border-gray-200 shadow-sm">
+      <div className={`min-h-screen ${themeConfig.theme.components.page.beige}`}>
+        <header className={themeConfig.header.container}>
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between items-center py-4">
               <div className="flex items-center gap-3">
                 <div className={`w-10 h-10 ${themeConfig.icon.primary}`}>
-                  <Heart className="w-5 h-5 text-white fill-current" />
+                  <Heart className="w-5 h-5 fill-current" />
                 </div>
                 <div>
-                  <h1 className="text-xl font-bold text-black">Event Admin</h1>
-                  <p className="text-sm text-black">Welcome, {user.username}</p>
+                  <h1 className={`text-xl font-bold ${themeConfig.header.text}`}>Event Admin</h1>
+                  <p className={`text-sm ${themeConfig.text.secondary}`}>Welcome, {user.username}</p>
                 </div>
               </div>
 
@@ -105,13 +105,13 @@ export default function AdminPage() {
                   href="/"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="px-3 py-2 text-sm font-medium text-black hover:text-amber-600 transition-colors"
+                  className={`px-3 py-2 text-sm font-medium ${themeConfig.header.link}`}
                 >
                   View Guest Portal
                 </a>
                 <button
                   onClick={handleLogout}
-                  className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-black hover:text-amber-600 transition-colors"
+                  className={`inline-flex items-center gap-2 px-3 py-2 text-sm font-medium ${themeConfig.header.link}`}
                 >
                   <LogOut className="w-4 h-4" />
                   Logout
@@ -126,11 +126,7 @@ export default function AdminPage() {
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
-                    className={`flex items-center gap-2 py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
-                      activeTab === tab.id
-                        ? 'border-yellow-500 text-amber-600'
-                        : 'border-transparent text-black hover:text-amber-600 hover:border-gray-300'
-                    }`}
+                    className={activeTab === tab.id ? themeConfig.tab.active : themeConfig.tab.inactive}
                   >
                     <Icon className="w-4 h-4" />
                     {tab.name}
