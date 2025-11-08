@@ -128,11 +128,9 @@ function DraggableTable({
   const isFull = seatsUsed >= table.capacity;
 
   const isRound = table.shape === 'round';
-  const isSquare = table.shape === 'square';
   const isOval = table.shape === 'oval';
   const isCocktail = table.shape === 'cocktail';
   const isUShape = table.shape === 'u-shape';
-  const isRectangular = table.shape === 'rectangular';
 
   const getBorderRadius = () => {
     if (isRound || isCocktail) return '50%';
@@ -153,7 +151,6 @@ function DraggableTable({
   return (
     <div
       ref={attachRef}
-      style={tableStyle}
       className={cn(
         themeConfig.table.default,
         'p-3 relative transition-all duration-200 flex flex-col items-center justify-center',
@@ -262,7 +259,7 @@ function DraggableTable({
           className={cn(
             'absolute -bottom-2 -right-2 text-xs rounded-full w-6 h-6 flex items-center justify-center transition-colors cursor-pointer z-20',
             themeConfig.badge.default,
-            showGuestList && `ring-2 ${themeConfig.badge.default.ring}`
+            showGuestList && 'ring-2 ring-emerald-300'
           )}
           onClick={(e) => {
             e.stopPropagation();

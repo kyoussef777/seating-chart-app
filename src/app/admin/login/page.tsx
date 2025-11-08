@@ -52,7 +52,7 @@ export default function LoginPage() {
               <Heart className="w-8 h-8 fill-current" />
             </div>
             <h1 className={`text-2xl font-bold ${themeConfig.text.heading} mb-2`}>Admin Access</h1>
-            <p className={themeConfig.text.secondary}>Sign in to manage your event seating</p>
+            <p className={themeConfig.text.muted}>Sign in to manage your event seating</p>
           </div>
 
           {error && (
@@ -99,12 +99,12 @@ export default function LoginPage() {
             >
               {isLoading ? (
                 <>
-                  <div className={`w-4 h-4 border-2 ${themeConfig.text.white} border-t-transparent rounded-full animate-spin`} />
+                  <div className="w-4 h-4 border-2 text-white border-t-transparent rounded-full animate-spin" />
                   Signing in...
                 </>
               ) : (
                 <>
-                  <Lock className={`w-4 h-4 ${themeConfig.text.white}`} />
+                  <Lock className="w-4 h-4 text-white" />
                   Sign In
                 </>
               )}

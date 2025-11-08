@@ -96,7 +96,7 @@ export default function AdminPage() {
                 </div>
                 <div>
                   <h1 className={`text-xl font-bold ${themeConfig.header.text}`}>Event Admin</h1>
-                  <p className={`text-sm ${themeConfig.text.secondary}`}>Welcome, {user.username}</p>
+                  <p className={`text-sm ${themeConfig.text.muted}`}>Welcome, {user.username}</p>
                 </div>
               </div>
 

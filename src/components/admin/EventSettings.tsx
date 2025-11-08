@@ -161,7 +161,7 @@ export default function EventSettings() {
                 >
                   {saving ? (
                     <>
-                      <div className={`w-4 h-4 border-2 ${themeConfig.text.white} border-t-transparent rounded-full animate-spin`} />
+                      <div className="w-4 h-4 border-2 text-white border-t-transparent rounded-full animate-spin" />
                       Saving...
                     </>
                   ) : (

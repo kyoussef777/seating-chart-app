@@ -234,17 +234,14 @@ export default function HomePage() {
           quality={95}
         />
         {/* Beige semi-transparent overlay */}
-        <div className="absolute inset-0 bg-stone-100/75 backdrop-blur-[1px]" />
+        <div className="absolute inset-0 bg-stone-100/75" />
       </div>
 
       {/* Content */}
-      <div className="relative z-10 container mx-auto px-4 pt-[25vh] sm:pt-[20vh] pb-8 max-w-2xl">
+      <div className="relative z-10 container mx-auto px-4 pt-[4vh] sm:pt-[3vh] pb-8 max-w-2xl">
         {/* Header */}
         <div className="text-center mb-8">
-          <div className="mx-auto w-32 h-32 mb-4 relative">
-            <Image src="/logo.png" alt="Mira & Kamal" fill className="object-contain" />
-          </div>
-          <h1 className={`text-3xl ${themeConfig.text.heading} mb-2 font-[family-name:var(--font-jimmy-script)]`}>{settings.eventName}</h1>
+          <h1 className={`text-5xl sm:text-6xl ${themeConfig.text.heading} mb-2 font-[family-name:var(--font-jimmy-script)]`}>{settings.eventName}</h1>
           <p className={`${themeConfig.text.body} text-lg`}>{settings.homePageText}</p>
         </div>
 
@@ -314,16 +311,19 @@ export default function HomePage() {
             <button
               type="submit"
               disabled={isSearching}
-              className={`w-full ${themeConfig.button.primary} flex items-center justify-center gap-2`}
+              className="w-full text-white font-medium transition-all duration-200 py-3 px-4 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              style={{ backgroundColor: '#A38550' }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#8B7043'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#A38550'}
             >
               {isSearching ? (
                 <>
-                  <div className={`w-4 h-4 border-2 ${themeConfig.text.white} border-t-transparent rounded-full animate-spin`} />
+                  <div className="w-4 h-4 border-2 text-white border-t-transparent rounded-full animate-spin" />
                   Searching...
                 </>
               ) : (
                 <>
-                  <Search className={`w-4 h-4 ${themeConfig.text.white}`} />
+                  <Search className="w-4 h-4 text-white" />
                   Find My Table
                 </>
               )}
@@ -344,7 +344,7 @@ export default function HomePage() {
                 <h3 className={`font-semibold ${themeConfig.text.heading} text-lg mb-4 text-center`}>Your Table Assignment</h3>
                 <div className="flex justify-center">
                   <div className={`bg-white rounded-lg px-8 py-4 border-2 ${themeConfig.classes.borderPrimary} shadow-md`}>
-                    <span className={`text-3xl font-bold ${themeConfig.text.primary}`}>{guestTable.name}</span>
+                    <span className={`text-3xl font-bold ${themeConfig.text.body}`}>{guestTable.name}</span>
                   </div>
                 </div>
               </div>
@@ -383,14 +383,20 @@ export default function HomePage() {
                 <button
                   type="submit"
                   disabled={isUpdatingAddress}
-                  className={`flex-1 ${themeConfig.button.primary}`}
+                  className="flex-1 text-white font-medium transition-all duration-200 py-2 px-4 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                  style={{ backgroundColor: '#A38550' }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#8B7043'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#A38550'}
                 >
                   {isUpdatingAddress ? 'Saving...' : 'Save Address'}
                 </button>
                 <button
                   type="button"
                   onClick={() => setShowAddressForm(false)}
-                  className={themeConfig.button.tertiary}
+                  className="text-white font-medium transition-all duration-200 py-2 px-4 rounded-lg"
+                  style={{ backgroundColor: '#A38550' }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#8B7043'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#A38550'}
                 >
                   Skip
                 </button>

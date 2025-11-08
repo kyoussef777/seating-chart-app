@@ -30,8 +30,8 @@ import {
   Trash2,
   Map,
   Save,
-  Maximize2,
   RotateCw,
+  LucideIcon,
 } from 'lucide-react';
 import { useTheme } from '@/hooks/useTheme';
 import { useDebounce } from '@/hooks/useDebounce';
@@ -90,7 +90,7 @@ interface ReferenceObject {
   rotation: number;
 }
 
-const REFERENCE_OBJECT_CONFIGS: Record<string, { width: number; height: number; label: string; color: string; icon: any }> = {
+const REFERENCE_OBJECT_CONFIGS: Record<string, { width: number; height: number; label: string; color: string; icon: LucideIcon }> = {
   danceFloor: { width: 200, height: 200, label: 'Dance Floor', color: 'bg-purple-200 border-purple-400', icon: Music },
   bar: { width: 150, height: 80, label: 'Bar', color: 'bg-blue-200 border-blue-400', icon: Wine },
   buffet: { width: 180, height: 60, label: 'Buffet', color: 'bg-orange-200 border-orange-400', icon: Utensils },
@@ -142,14 +142,6 @@ export default function SeatingChart() {
     return defaults[shape] || 8;
   };
 
-  const getSeatsUsed = (guests: Guest[]) => {
-    return guests.reduce((total, guest) => total + (guest.partySize || 1), 0);
-  };
-
-  const getAvailableSeats = (table: Table) => {
-    return table.capacity - getSeatsUsed(table.guests);
-  };
-
   const [loading, setLoading] = useState(true);
   const [zoomLevel, setZoomLevel] = useState(0.7);
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
@@ -198,7 +190,7 @@ export default function SeatingChart() {
 
         if (labelsRes.ok) {
           const labelsData = await labelsRes.json();
-          setLabels(labelsData.map((l: any) => ({
+          setLabels(labelsData.map((l: { id: string; text: string; x: number; y: number; fontSize?: number; font_size?: number; rotation?: number }) => ({
             id: l.id,
             text: l.text,
             x: l.x,
@@ -210,7 +202,7 @@ export default function SeatingChart() {
 
         if (shapesRes.ok) {
           const shapesData = await shapesRes.json();
-          setShapes(shapesData.map((s: any) => ({
+          setShapes(shapesData.map((s: { id: string; type: string; x: number; y: number; width: number; height: number; rotation?: number; color: string; label?: string }) => ({
             id: s.id,
             type: s.type,
             x: s.x,
@@ -225,7 +217,7 @@ export default function SeatingChart() {
 
         if (objectsRes.ok) {
           const objectsData = await objectsRes.json();
-          setReferenceObjects(objectsData.map((o: any) => ({
+          setReferenceObjects(objectsData.map((o: { id: string; type: string; x: number; y: number; width: number; height: number; rotation?: number }) => ({
             id: o.id,
             type: o.type,
             x: o.x,

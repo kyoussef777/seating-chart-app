@@ -270,7 +270,7 @@ export default function UserManagement() {
               return (
                 <tr
                   key={user.id}
-                  className={`transition-colors ${themeConfig.listItem.hover} ${isEditing ? themeConfig.theme.secondary[100] : ''}`}
+                  className={`transition-colors hover:bg-stone-50 hover:border-stone-300 ${isEditing ? 'bg-stone-100' : ''}`}
                 >
                   <td className="px-6 py-3">
                     {isEditing ? (
