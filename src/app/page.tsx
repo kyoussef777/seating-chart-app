@@ -231,7 +231,7 @@ export default function HomePage() {
           fill
           className="object-cover object-top"
           priority
-          quality={95}
+          quality={75}
         />
         {/* Beige semi-transparent overlay */}
         <div className="absolute inset-0 bg-stone-100/75" />
