@@ -783,6 +783,39 @@ export default function SeatingChart() {
     }
   };
 
+  const handleRenameTable = async (tableId: string, newName: string) => {
+    try {
+      const table = tables.find((t) => t.id === tableId);
+      if (!table) return;
+
+      const response = await fetch('/api/tables', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          id: tableId,
+          name: newName,
+          shape: table.shape,
+          capacity: table.capacity,
+          positionX: table.positionX,
+          positionY: table.positionY,
+          rotation: table.rotation,
+        }),
+      });
+
+      if (response.ok) {
+        setTables((prev) =>
+          prev.map((t) => (t.id === tableId ? { ...t, name: newName } : t))
+        );
+        toast.success('Table renamed');
+      }
+    } catch (error) {
+      console.error('Failed to rename table:', error);
+      toast.error('Failed to rename table');
+    }
+  };
+
   const handleAssignGuest = useCallback(
     async (guestId: string, tableId: string) => {
       const guest = unassignedGuests.find((g) => g.id === guestId);
@@ -1668,6 +1701,8 @@ export default function SeatingChart() {
                   onAssignGuest={handleAssignGuest}
                   onUnassignGuest={handleUnassignGuest}
                   onRotate={handleRotateTable}
+                  onRename={handleRenameTable}
+                  allTableNames={tables.map((t) => t.name)}
                 />
               ))}
 

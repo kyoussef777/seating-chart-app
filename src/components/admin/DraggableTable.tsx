@@ -32,6 +32,8 @@ interface DraggableTableProps {
   onAssignGuest: (guestId: string, tableId: string) => void;
   onUnassignGuest: (guestId: string) => void;
   onRotate: (tableId: string, rotation: number) => void;
+  onRename: (tableId: string, newName: string) => void;
+  allTableNames: string[];
 }
 
 // Get dimensions for each table shape
@@ -60,10 +62,16 @@ function DraggableTable({
   onAssignGuest,
   onUnassignGuest,
   onRotate,
+  onRename,
+  allTableNames,
 }: DraggableTableProps) {
   const themeConfig = useTheme();
   const [showGuestList, setShowGuestList] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editName, setEditName] = useState(table.name);
+  const [nameError, setNameError] = useState('');
   const popupRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const dimensions = getTableDimensions(table.shape);
 
   // Close popup when clicking outside
@@ -82,6 +90,58 @@ function DraggableTable({
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [showGuestList]);
+
+  // Focus input when editing starts
+  useEffect(() => {
+    if (isEditing && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
+    }
+  }, [isEditing]);
+
+  const handleStartEdit = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsEditing(true);
+    setEditName(table.name);
+    setNameError('');
+  };
+
+  const handleSaveEdit = () => {
+    const trimmedName = editName.trim();
+
+    if (!trimmedName) {
+      setNameError('Table name cannot be empty');
+      return;
+    }
+
+    // Check if name already exists (excluding current table)
+    const isDuplicate = allTableNames.some(
+      name => name.toLowerCase() === trimmedName.toLowerCase() && name !== table.name
+    );
+
+    if (isDuplicate) {
+      setNameError('A table with this name already exists');
+      return;
+    }
+
+    onRename(table.id, trimmedName);
+    setIsEditing(false);
+    setNameError('');
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditing(false);
+    setEditName(table.name);
+    setNameError('');
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleSaveEdit();
+    } else if (e.key === 'Escape') {
+      handleCancelEdit();
+    }
+  };
 
   const [{ isDragging }, drag] = useDrag(() => ({
     type: 'table',
@@ -196,10 +256,36 @@ function DraggableTable({
       <div
         className={cn(
           themeConfig.text.heading,
-          isCocktail ? 'text-xs text-center' : 'text-sm text-center font-bold mb-1'
+          isCocktail ? 'text-xs text-center' : 'text-sm text-center font-bold mb-1',
+          'relative'
         )}
       >
-        {table.name}
+        {isEditing ? (
+          <div className="flex flex-col gap-1" onClick={(e) => e.stopPropagation()}>
+            <input
+              ref={inputRef}
+              type="text"
+              value={editName}
+              onChange={(e) => setEditName(e.target.value)}
+              onKeyDown={handleKeyDown}
+              onBlur={handleSaveEdit}
+              className="w-full px-2 py-1 text-xs border-2 border-emerald-500 rounded focus:outline-none focus:ring-2 focus:ring-emerald-300"
+            />
+            {nameError && (
+              <div className="text-xs text-red-600 font-normal">
+                {nameError}
+              </div>
+            )}
+          </div>
+        ) : (
+          <div
+            className="cursor-pointer hover:bg-emerald-50 rounded px-1 transition-colors"
+            onClick={handleStartEdit}
+            title="Click to rename"
+          >
+            {table.name}
+          </div>
+        )}
       </div>
 
       {/* Capacity Info - Click to show/hide guest list */}
