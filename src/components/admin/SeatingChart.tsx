@@ -32,7 +32,9 @@ import {
   Save,
   RotateCw,
   LucideIcon,
+  FileSpreadsheet,
 } from 'lucide-react';
+import * as XLSX from 'xlsx';
 import { useTheme } from '@/hooks/useTheme';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useToast } from '@/contexts/ToastContext';
@@ -272,6 +274,106 @@ export default function SeatingChart() {
       toast.error('Failed to save layout');
     }
   }, [showGrid, snapToGrid, gridSize, showMiniMap, labels, shapes, referenceObjects, toast]);
+
+  // Export seating chart to Excel
+  const exportToExcel = useCallback(() => {
+    try {
+      // Prepare data for Excel
+      const excelData: (string | number)[][] = [];
+
+      // Add header row
+      excelData.push(['Table Name', 'Table Shape', 'Capacity', 'Seats Used', 'Guest Name', 'Party Size', 'Phone Number', 'Address']);
+
+      // Sort tables by name
+      const sortedTables = [...tables].sort((a, b) => a.name.localeCompare(b.name));
+
+      // Add data for each table
+      sortedTables.forEach(table => {
+        const seatsUsed = table.guests.reduce((total, guest) => total + (guest.partySize || 1), 0);
+
+        if (table.guests.length === 0) {
+          // Empty table - show one row
+          excelData.push([
+            table.name,
+            table.shape,
+            table.capacity,
+            0,
+            '(No guests assigned)',
+            '',
+            '',
+            ''
+          ]);
+        } else {
+          // Sort guests by name
+          const sortedGuests = [...table.guests].sort((a, b) => a.name.localeCompare(b.name));
+
+          sortedGuests.forEach((guest, index) => {
+            excelData.push([
+              index === 0 ? table.name : '', // Only show table info on first guest row
+              index === 0 ? table.shape : '',
+              index === 0 ? table.capacity : '',
+              index === 0 ? seatsUsed : '',
+              guest.name,
+              guest.partySize || 1,
+              guest.phoneNumber || '',
+              guest.address || ''
+            ]);
+          });
+        }
+      });
+
+      // Add unassigned guests if any
+      if (unassignedGuests.length > 0) {
+        excelData.push([]); // Empty row
+        excelData.push(['UNASSIGNED GUESTS', '', '', '', '', '', '', '']);
+
+        const sortedUnassigned = [...unassignedGuests].sort((a, b) => a.name.localeCompare(b.name));
+        sortedUnassigned.forEach(guest => {
+          excelData.push([
+            '',
+            '',
+            '',
+            '',
+            guest.name,
+            guest.partySize || 1,
+            guest.phoneNumber || '',
+            guest.address || ''
+          ]);
+        });
+      }
+
+      // Create workbook and worksheet
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.aoa_to_sheet(excelData);
+
+      // Set column widths
+      ws['!cols'] = [
+        { wch: 15 }, // Table Name
+        { wch: 12 }, // Table Shape
+        { wch: 10 }, // Capacity
+        { wch: 12 }, // Seats Used
+        { wch: 25 }, // Guest Name
+        { wch: 12 }, // Party Size
+        { wch: 15 }, // Phone Number
+        { wch: 30 }, // Address
+      ];
+
+      // Add worksheet to workbook
+      XLSX.utils.book_append_sheet(wb, ws, 'Seating Chart');
+
+      // Generate filename with current date
+      const date = new Date().toISOString().split('T')[0];
+      const filename = `seating-chart-${date}.xlsx`;
+
+      // Save file
+      XLSX.writeFile(wb, filename);
+
+      toast.success('Seating chart exported to Excel');
+    } catch (error) {
+      console.error('Failed to export to Excel:', error);
+      toast.error('Failed to export to Excel');
+    }
+  }, [tables, unassignedGuests, toast]);
 
   // Snap to grid helper
   const snapPosition = useCallback(
@@ -1177,6 +1279,15 @@ export default function SeatingChart() {
           >
             <Save className="w-4 h-4" />
             Save Layout
+          </button>
+          <button
+            onClick={exportToExcel}
+            disabled={tables.length === 0}
+            className={`inline-flex items-center gap-2 ${themeConfig.button.secondary} disabled:opacity-50 disabled:cursor-not-allowed`}
+            title="Export seating chart to Excel"
+          >
+            <FileSpreadsheet className="w-4 h-4" />
+            Export to Excel
           </button>
           <button
             onClick={handleAutoArrange}
