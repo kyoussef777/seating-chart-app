@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
-import { Search, MapPin, Edit3 } from 'lucide-react';
+import { Search, MapPin, Edit3, Users } from 'lucide-react';
 import { useTheme } from '@/hooks/useTheme';
 import { useDebounce } from '@/hooks/useDebounce';
 
@@ -12,6 +12,7 @@ interface Guest {
   phoneNumber: string | null;
   address: string | null;
   tableId: string | null;
+  partySize: number;
 }
 
 interface Table {
@@ -137,13 +138,6 @@ export default function HomePage() {
         setSelectedSuggestionIndex(-1);
         break;
     }
-  };
-
-  // Get table name for a guest
-  const getTableName = (tableId: string | null) => {
-    if (!tableId) return 'Unassigned';
-    const table = allTables.find(t => t.id === tableId);
-    return table?.name || 'Unknown Table';
   };
 
   // Handle selecting a guest from suggestions
@@ -292,15 +286,7 @@ export default function HomePage() {
                             : 'hover:bg-stone-50'
                         }`}
                       >
-                        <div className="flex justify-between items-center">
-                          <span className={themeConfig.text.body}>{guest.name}</span>
-                          <span className={getTableName(guest.tableId) === 'Unassigned'
-                            ? themeConfig.badge.unassigned
-                            : themeConfig.badge.assigned
-                          }>
-                            {getTableName(guest.tableId)}
-                          </span>
-                        </div>
+                        <span className={themeConfig.text.body}>{guest.name}</span>
                       </button>
                     ))}
                   </div>
@@ -338,6 +324,16 @@ export default function HomePage() {
               <MapPin className={`w-5 h-5 ${themeConfig.icon.color.primary}`} />
               Welcome, {foundGuest.name}!
             </h2>
+
+            {/* Party Size Info */}
+            <div className="mb-4 p-3 bg-stone-50 rounded-lg border border-stone-200">
+              <div className="flex items-center gap-2">
+                <Users className={`w-5 h-5 ${themeConfig.icon.color.primary}`} />
+                <span className={`${themeConfig.text.body} font-medium`}>
+                  Party Size: {foundGuest.partySize || 1} {foundGuest.partySize === 1 ? 'person' : 'people'}
+                </span>
+              </div>
+            </div>
 
             {guestTable ? (
               <div className={`${themeConfig.theme.gradient.floral} rounded-lg p-6 ${themeConfig.classes.borderBeige}`}>
