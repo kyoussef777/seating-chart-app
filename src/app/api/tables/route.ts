@@ -29,20 +29,32 @@ export async function POST(request: NextRequest) {
     await requireAuth();
     const { name, shape, capacity, positionX, positionY, rotation } = await request.json();
 
-    if (!name || !shape || !capacity) {
+    // Validate and sanitize inputs
+    if (!name || typeof name !== 'string' || !shape || !capacity) {
       return NextResponse.json(
         { error: 'Name, shape, and capacity are required' },
         { status: 400 }
       );
     }
 
+    const sanitizedName = name.trim().slice(0, 50);
+    const sanitizedShape = ['round', 'rectangular'].includes(shape) ? shape : 'round';
+    const validCapacity = Math.max(1, Math.min(50, parseInt(capacity) || 8));
+
+    if (!sanitizedName) {
+      return NextResponse.json(
+        { error: 'Table name cannot be empty' },
+        { status: 400 }
+      );
+    }
+
     const [table] = await db.insert(tables).values({
-      name,
-      shape,
-      capacity: parseInt(capacity),
-      positionX: positionX || 0,
-      positionY: positionY || 0,
-      rotation: rotation || 0,
+      name: sanitizedName,
+      shape: sanitizedShape,
+      capacity: validCapacity,
+      positionX: parseFloat(positionX) || 0,
+      positionY: parseFloat(positionY) || 0,
+      rotation: parseFloat(rotation) || 0,
     }).returning();
 
     return NextResponse.json({ table: { ...table, guests: [] } });
@@ -63,23 +75,46 @@ export async function PUT(request: NextRequest) {
     await requireAuth();
     const { id, name, shape, capacity, positionX, positionY, rotation } = await request.json();
 
-    if (!id) {
+    if (!id || typeof id !== 'string') {
       return NextResponse.json(
         { error: 'Table ID is required' },
         { status: 400 }
       );
     }
 
+    // Build update object with sanitized values
+    const updateData: {
+      name?: string;
+      shape?: string;
+      capacity?: number;
+      positionX?: number;
+      positionY?: number;
+      rotation?: number;
+    } = {};
+
+    if (name !== undefined) {
+      const sanitizedName = String(name).trim().slice(0, 50);
+      if (!sanitizedName) {
+        return NextResponse.json(
+          { error: 'Table name cannot be empty' },
+          { status: 400 }
+        );
+      }
+      updateData.name = sanitizedName;
+    }
+    if (shape !== undefined) {
+      updateData.shape = ['round', 'rectangular'].includes(shape) ? shape : undefined;
+    }
+    if (capacity !== undefined) {
+      updateData.capacity = Math.max(1, Math.min(50, parseInt(capacity) || 8));
+    }
+    if (positionX !== undefined) updateData.positionX = parseFloat(positionX) || 0;
+    if (positionY !== undefined) updateData.positionY = parseFloat(positionY) || 0;
+    if (rotation !== undefined) updateData.rotation = parseFloat(rotation) || 0;
+
     const [updatedTable] = await db
       .update(tables)
-      .set({
-        name: name || undefined,
-        shape: shape || undefined,
-        capacity: capacity ? parseInt(capacity) : undefined,
-        positionX: positionX !== undefined ? positionX : undefined,
-        positionY: positionY !== undefined ? positionY : undefined,
-        rotation: rotation !== undefined ? rotation : undefined,
-      })
+      .set(updateData)
       .where(eq(tables.id, id))
       .returning();
 

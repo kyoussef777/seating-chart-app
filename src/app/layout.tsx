@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Playfair_Display, Fleur_De_Leah } from "next/font/google";
 import { ToastProvider } from "@/contexts/ToastContext";
-import localFont from "next/font/local";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -14,10 +13,16 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-const jimmyScript = localFont({
-  src: "../../public/fonts/jimmy-script.otf",
-  variable: "--font-jimmy-script",
-  display: "swap",
+const fleurDeLeah = Fleur_De_Leah({
+  variable: "--font-fleur-de-leah",
+  subsets: ["latin"],
+  weight: "400",
+});
+
+const playfairDisplay = Playfair_Display({
+  variable: "--font-playfair-display",
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
 });
 
 export const metadata: Metadata = {
@@ -46,7 +51,7 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/logo-bg.png" />
       </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} ${jimmyScript.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} ${fleurDeLeah.variable} ${playfairDisplay.variable} antialiased`}
         suppressHydrationWarning
       >
         <ToastProvider>

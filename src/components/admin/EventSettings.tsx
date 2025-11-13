@@ -8,6 +8,7 @@ interface EventSettings {
   id: string;
   eventName: string;
   homePageText: string;
+  searchEnabled: boolean;
   updatedAt: string;
 }
 
@@ -17,6 +18,7 @@ export default function EventSettings() {
     id: '',
     eventName: 'Our Special Day',
     homePageText: 'Welcome to our wedding! Please find your table below.',
+    searchEnabled: true,
     updatedAt: '',
   });
   const [loading, setLoading] = useState(true);
@@ -55,6 +57,7 @@ export default function EventSettings() {
         body: JSON.stringify({
           eventName: settings.eventName.trim(),
           homePageText: settings.homePageText.trim(),
+          searchEnabled: settings.searchEnabled,
         }),
       });
 
@@ -138,6 +141,34 @@ export default function EventSettings() {
               <p className={`text-xs ${themeConfig.text.muted} mt-1`}>
                 This message will appear below the event name on the guest portal
               </p>
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between">
+                <div>
+                  <label htmlFor="searchEnabled" className={themeConfig.text.label}>
+                    Enable Guest Search
+                  </label>
+                  <p className={`text-xs ${themeConfig.text.muted} mt-1`}>
+                    Turn off to hide the search functionality until the event day
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={settings.searchEnabled}
+                  onClick={() => setSettings({ ...settings, searchEnabled: !settings.searchEnabled })}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 ${
+                    settings.searchEnabled ? 'bg-emerald-600' : 'bg-stone-300'
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      settings.searchEnabled ? 'translate-x-6' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </div>
             </div>
 
             <div className={`flex items-center justify-between pt-4 border-t ${themeConfig.classes.borderDefault}`}>

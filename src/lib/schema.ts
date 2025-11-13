@@ -1,4 +1,4 @@
-import { pgTable, text, integer, real, timestamp, uuid, varchar, index } from 'drizzle-orm/pg-core';
+import { pgTable, text, integer, real, timestamp, uuid, varchar, index, boolean } from 'drizzle-orm/pg-core';
 
 export const users = pgTable('users', {
   id: uuid('id').defaultRandom().primaryKey(),
@@ -11,6 +11,7 @@ export const eventSettings = pgTable('event_settings', {
   id: uuid('id').defaultRandom().primaryKey(),
   eventName: text('event_name').notNull().default("Mira & Kamal's Engagement"),
   homePageText: text('home_page_text').notNull().default('Welcome to our engagement! Please find your table below.'),
+  searchEnabled: boolean('search_enabled').notNull().default(true),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 

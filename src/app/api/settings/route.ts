@@ -31,9 +31,9 @@ export async function GET() {
 export async function PUT(request: NextRequest) {
   try {
     await requireAuth();
-    const { eventName, homePageText } = await request.json();
+    const { eventName, homePageText, searchEnabled } = await request.json();
 
-    if (!eventName && !homePageText) {
+    if (eventName === undefined && homePageText === undefined && searchEnabled === undefined) {
       return NextResponse.json(
         { error: 'At least one field is required' },
         { status: 400 }
@@ -50,10 +50,12 @@ export async function PUT(request: NextRequest) {
       const updateData: {
         eventName?: string;
         homePageText?: string;
+        searchEnabled?: boolean;
         updatedAt: Date;
       } = { updatedAt: new Date() };
       if (eventName !== undefined) updateData.eventName = eventName;
       if (homePageText !== undefined) updateData.homePageText = homePageText;
+      if (searchEnabled !== undefined) updateData.searchEnabled = searchEnabled;
 
       [updatedSettings] = await db
         .update(eventSettings)
@@ -65,6 +67,7 @@ export async function PUT(request: NextRequest) {
       [updatedSettings] = await db.insert(eventSettings).values({
         eventName: eventName || 'Our Special Day',
         homePageText: homePageText || 'Welcome to our wedding! Please find your table below.',
+        searchEnabled: searchEnabled !== undefined ? searchEnabled : true,
       }).returning();
     }
 

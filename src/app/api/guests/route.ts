@@ -15,10 +15,12 @@ export async function GET(request: NextRequest) {
 
     let guestList;
     if (search) {
+      // Sanitize search input to prevent potential issues
+      const sanitizedSearch = search.trim().slice(0, 100);
       guestList = await db
         .select()
         .from(guests)
-        .where(ilike(guests.name, `%${search}%`));
+        .where(ilike(guests.name, `%${sanitizedSearch}%`));
     } else {
       guestList = await db.select().from(guests);
     }
@@ -29,6 +31,7 @@ export async function GET(request: NextRequest) {
         id: guest.id,
         name: guest.name,
         tableId: guest.tableId,
+        partySize: guest.partySize,
         // Exclude phoneNumber, address, and other PII
       }));
       return NextResponse.json({ guests: publicGuestList });
@@ -50,19 +53,28 @@ export async function POST(request: NextRequest) {
     await requireAuth();
     const { name, phoneNumber, address, tableId, partySize } = await request.json();
 
-    if (!name) {
+    // Validate and sanitize inputs
+    if (!name || typeof name !== 'string') {
       return NextResponse.json(
         { error: 'Name is required' },
         { status: 400 }
       );
     }
 
+    const sanitizedName = name.trim().slice(0, 255);
+    if (!sanitizedName) {
+      return NextResponse.json(
+        { error: 'Name cannot be empty' },
+        { status: 400 }
+      );
+    }
+
     const [guest] = await db.insert(guests).values({
-      name,
-      phoneNumber: phoneNumber || null,
-      address: address || null,
+      name: sanitizedName,
+      phoneNumber: phoneNumber ? String(phoneNumber).trim().slice(0, 20) : null,
+      address: address ? String(address).trim().slice(0, 500) : null,
       tableId: tableId || null,
-      partySize: partySize || 1,
+      partySize: Math.max(1, Math.min(20, parseInt(partySize) || 1)),
     }).returning();
 
     return NextResponse.json({ guest });
@@ -82,11 +94,20 @@ export async function PUT(request: NextRequest) {
   try {
     const { id, name, phoneNumber, address, tableId, partySize, requiresAuth = true } = await request.json();
 
+    // SECURITY: Always require auth for updates, except for guest self-service address updates
     if (requiresAuth) {
       await requireAuth();
+    } else {
+      // For guest self-service, only allow address updates (no name, table, party size changes)
+      if (name !== undefined || tableId !== undefined || partySize !== undefined) {
+        return NextResponse.json(
+          { error: 'Unauthorized: Only address updates are allowed without authentication' },
+          { status: 403 }
+        );
+      }
     }
 
-    if (!id) {
+    if (!id || typeof id !== 'string') {
       return NextResponse.json(
         { error: 'Guest ID is required' },
         { status: 400 }
@@ -150,11 +171,28 @@ export async function PUT(request: NextRequest) {
       partySize?: number;
       updatedAt: Date;
     } = { updatedAt: new Date() };
-    if (name !== undefined) updateData.name = name;
-    if (phoneNumber !== undefined) updateData.phoneNumber = phoneNumber;
-    if (address !== undefined) updateData.address = address;
+
+    // Sanitize and validate inputs
+    if (name !== undefined) {
+      const sanitizedName = String(name).trim().slice(0, 255);
+      if (!sanitizedName) {
+        return NextResponse.json(
+          { error: 'Name cannot be empty' },
+          { status: 400 }
+        );
+      }
+      updateData.name = sanitizedName;
+    }
+    if (phoneNumber !== undefined) {
+      updateData.phoneNumber = phoneNumber ? String(phoneNumber).trim().slice(0, 20) : null;
+    }
+    if (address !== undefined) {
+      updateData.address = address ? String(address).trim().slice(0, 500) : null;
+    }
     if (tableId !== undefined) updateData.tableId = tableId;
-    if (partySize !== undefined) updateData.partySize = partySize;
+    if (partySize !== undefined) {
+      updateData.partySize = Math.max(1, Math.min(20, parseInt(partySize) || 1));
+    }
 
     const [updatedGuest] = await db
       .update(guests)
