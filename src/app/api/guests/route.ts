@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth, getSession } from '@/lib/auth';
 import { db } from '@/lib/db';
-import { guests, tables } from '@/lib/schema';
+import { guests, tables, eventSettings } from '@/lib/schema';
 import { eq, ilike } from 'drizzle-orm';
 
 export async function GET(request: NextRequest) {
@@ -12,6 +12,17 @@ export async function GET(request: NextRequest) {
     // Check if the request is authenticated
     const session = await getSession();
     const isAuthenticated = session !== null;
+
+    // If not authenticated, check if search is enabled
+    if (!isAuthenticated) {
+      const [settings] = await db.select().from(eventSettings).limit(1);
+      if (settings && !settings.searchEnabled) {
+        return NextResponse.json(
+          { error: 'Guest search is currently disabled' },
+          { status: 403 }
+        );
+      }
+    }
 
     let guestList;
     if (search) {

@@ -44,6 +44,7 @@ export default function HomePage() {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(-1);
   const [justSelected, setJustSelected] = useState(false);
+  const [settingsLoading, setSettingsLoading] = useState(true);
   const [settings, setSettings] = useState<EventSettings>({
     eventName: "Mira & Kamal's Engagement",
     homePageText: 'Welcome to our engagement! Please find your table below.',
@@ -65,6 +66,8 @@ export default function HomePage() {
       }
     } catch {
       console.error('Failed to fetch settings');
+    } finally {
+      setSettingsLoading(false);
     }
   };
 
@@ -231,7 +234,7 @@ export default function HomePage() {
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!searchName.trim()) return;
+    if (!searchName.trim() || !settings.searchEnabled) return;
 
     setIsSearching(true);
     setShowSuggestions(false);
@@ -298,12 +301,17 @@ export default function HomePage() {
       <div className="relative z-10 container mx-auto px-4 pt-[4vh] sm:pt-[3vh] pb-8 max-w-2xl">
         {/* Header */}
         <div className="text-center mb-8">
-          <h1 className={`text-6xl sm:text-7xl ${themeConfig.text.heading} mb-4 font-[family-name:var(--font-fleur-de-leah)] tracking-wide leading-tight`}>{settings.eventName}</h1>
+          <h1 className={`text-5xl sm:text-5xl ${themeConfig.text.heading} mb-4 font-[family-name:var(--font-fleur-de-leah)] tracking-wide leading-tight`}>{settings.eventName}</h1>
           <p className={`${themeConfig.text.body} text-lg sm:text-xl font-[family-name:var(--font-playfair-display)] tracking-wide leading-relaxed`}>{settings.homePageText}</p>
         </div>
 
         {/* Search Form or Disabled Message */}
-        {settings.searchEnabled ? (
+        {settingsLoading ? (
+          <div className={`${themeConfig.card} mb-8 text-center py-12`}>
+            <div className={`w-8 h-8 border-4 ${themeConfig.loading.spinner} border-t-transparent rounded-full animate-spin mx-auto mb-4`} />
+            <p className={themeConfig.loading.text}>Loading...</p>
+          </div>
+        ) : settings.searchEnabled ? (
           <div className={`${themeConfig.card} mb-8`}>
           <form onSubmit={handleSearch} className="space-y-4">
             <div>
