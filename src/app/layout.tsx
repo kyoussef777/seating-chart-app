@@ -26,15 +26,15 @@ const playfairDisplay = Playfair_Display({
 });
 
 export const metadata: Metadata = {
-  title: "Mira & Kamal's Engagement",
-  description: "Find your table assignment for Mira & Kamal's engagement celebration",
+  title: "Seating Chart | Find Your Table",
+  description: "Find your table assignment for our special celebration",
   icons: {
     icon: '/logo-bg.png',
     apple: '/logo-bg.png',
   },
   openGraph: {
-    title: "Mira & Kamal's Engagement",
-    description: "Find your table assignment for Mira & Kamal's engagement celebration",
+    title: "Seating Chart | Find Your Table",
+    description: "Find your table assignment for our special celebration",
     images: ['/logo.png'],
   },
 };

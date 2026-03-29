@@ -45,11 +45,11 @@ export default function LoginPage() {
 
   return (
     <div className={`min-h-screen ${themeConfig.page} flex items-center justify-center p-4`}>
-      <div className="max-w-md w-full">
-        <div className={`bg-white rounded-2xl shadow-xl p-8 ${themeConfig.classes.borderBeige}`}>
+      <div className="max-w-md w-full animate-fadeIn">
+        <div className={`bg-white rounded-2xl shadow-xl p-8 border ${themeConfig.classes.borderBeige}`}>
           <div className="text-center mb-8">
-            <div className={`mx-auto w-16 h-16 ${themeConfig.icon.primary} mb-4`}>
-              <Heart className="w-8 h-8 fill-current" />
+            <div className={`mx-auto w-14 h-14 ${themeConfig.icon.primary} mb-4`}>
+              <Heart className="w-7 h-7 fill-current" />
             </div>
             <h1 className={`text-2xl font-bold ${themeConfig.text.heading} mb-2`}>Admin Access</h1>
             <p className={themeConfig.text.muted}>Sign in to manage your event seating</p>

@@ -1256,6 +1256,16 @@ export default function SeatingChart() {
     });
   };
 
+  // Calculate stats
+  const totalGuests = tables.reduce((sum, t) => sum + t.guests.reduce((gs, g) => gs + (g.partySize || 1), 0), 0) + unassignedGuests.reduce((sum, g) => sum + (g.partySize || 1), 0);
+  const assignedGuests = tables.reduce((sum, t) => sum + t.guests.reduce((gs, g) => gs + (g.partySize || 1), 0), 0);
+  const totalCapacity = tables.reduce((sum, t) => sum + t.capacity, 0);
+  const assignmentPercent = totalGuests > 0 ? Math.round((assignedGuests / totalGuests) * 100) : 0;
+  const tablesAtCapacity = tables.filter(t => {
+    const used = t.guests.reduce((sum, g) => sum + (g.partySize || 1), 0);
+    return used >= t.capacity;
+  }).length;
+
   if (loading) {
     return (
       <div className="text-center py-12">
@@ -1268,39 +1278,43 @@ export default function SeatingChart() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
+    <div className="space-y-4">
+      {/* Header + Actions */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <h2 className={`text-2xl ${themeConfig.text.heading}`}>Seating Chart</h2>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <button
             onClick={savePreferences}
-            className={`inline-flex items-center gap-2 ${themeConfig.button.secondary}`}
+            className={`inline-flex items-center gap-1.5 text-sm ${themeConfig.button.secondary}`}
             title="Save layout"
           >
             <Save className="w-4 h-4" />
-            Save Layout
+            <span className="hidden sm:inline">Save Layout</span>
+            <span className="sm:hidden">Save</span>
           </button>
           <button
             onClick={exportToExcel}
             disabled={tables.length === 0}
-            className={`inline-flex items-center gap-2 ${themeConfig.button.secondary} disabled:opacity-50 disabled:cursor-not-allowed`}
+            className={`inline-flex items-center gap-1.5 text-sm ${themeConfig.button.secondary} disabled:opacity-50 disabled:cursor-not-allowed`}
             title="Export seating chart to Excel"
           >
             <FileSpreadsheet className="w-4 h-4" />
-            Export to Excel
+            <span className="hidden sm:inline">Export Excel</span>
+            <span className="sm:hidden">Export</span>
           </button>
           <button
             onClick={handleAutoArrange}
             disabled={tables.length === 0}
-            className={`inline-flex items-center gap-2 ${themeConfig.button.secondary} disabled:opacity-50 disabled:cursor-not-allowed`}
+            className={`inline-flex items-center gap-1.5 text-sm ${themeConfig.button.secondary} disabled:opacity-50 disabled:cursor-not-allowed`}
             title="Auto-arrange tables"
           >
             <Shuffle className="w-4 h-4" />
-            Auto Arrange
+            <span className="hidden sm:inline">Auto Arrange</span>
+            <span className="sm:hidden">Arrange</span>
           </button>
           <button
             onClick={() => setShowAddTable(true)}
-            className={`inline-flex items-center gap-2 ${themeConfig.button.primary}`}
+            className={`inline-flex items-center gap-1.5 text-sm ${themeConfig.button.primary}`}
           >
             <Plus className="w-4 h-4" />
             Add Table
@@ -1308,32 +1322,79 @@ export default function SeatingChart() {
         </div>
       </div>
 
+      {/* Stats Summary Bar */}
+      {(tables.length > 0 || unassignedGuests.length > 0) && (
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+          <div className="bg-white rounded-xl p-3 border border-stone-200 shadow-sm">
+            <div className={`text-xs ${themeConfig.text.muted} mb-0.5`}>Tables</div>
+            <div className={`text-xl font-bold ${themeConfig.text.heading}`}>{tables.length}</div>
+          </div>
+          <div className="bg-white rounded-xl p-3 border border-stone-200 shadow-sm">
+            <div className={`text-xs ${themeConfig.text.muted} mb-0.5`}>Total Seats</div>
+            <div className={`text-xl font-bold ${themeConfig.text.heading}`}>{assignedGuests}/{totalCapacity}</div>
+          </div>
+          <div className="bg-white rounded-xl p-3 border border-stone-200 shadow-sm">
+            <div className={`text-xs ${themeConfig.text.muted} mb-0.5`}>Assigned</div>
+            <div className="flex items-center gap-2">
+              <div className={`text-xl font-bold ${assignmentPercent === 100 ? 'text-emerald-600' : themeConfig.text.heading}`}>{assignmentPercent}%</div>
+              <div className="flex-1 bg-stone-200 rounded-full h-1.5 min-w-[40px]">
+                <div
+                  className={`h-1.5 rounded-full transition-all duration-500 ${assignmentPercent === 100 ? 'bg-emerald-500' : 'bg-amber-500'}`}
+                  style={{ width: `${assignmentPercent}%` }}
+                />
+              </div>
+            </div>
+          </div>
+          <div className="bg-white rounded-xl p-3 border border-stone-200 shadow-sm">
+            <div className={`text-xs ${themeConfig.text.muted} mb-0.5`}>Unassigned</div>
+            <div className={`text-xl font-bold ${unassignedGuests.length > 0 ? 'text-amber-600' : 'text-emerald-600'}`}>
+              {unassignedGuests.reduce((sum, g) => sum + (g.partySize || 1), 0)}
+            </div>
+          </div>
+          <div className="bg-white rounded-xl p-3 border border-stone-200 shadow-sm col-span-2 sm:col-span-1">
+            <div className={`text-xs ${themeConfig.text.muted} mb-0.5`}>Full Tables</div>
+            <div className={`text-xl font-bold ${tablesAtCapacity > 0 ? 'text-rose-600' : themeConfig.text.heading}`}>
+              {tablesAtCapacity}/{tables.length}
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {/* Unassigned Guests */}
+        {/* Unassigned Guests Sidebar */}
         <div className={`lg:col-span-1 ${themeConfig.card}`}>
           <h3
-            className={`font-semibold mb-4 flex items-center gap-2 ${themeConfig.text.heading}`}
+            className={`font-semibold mb-3 flex items-center justify-between ${themeConfig.text.heading}`}
           >
-            <Users className="w-5 h-5" />
-            Unassigned Guests ({unassignedGuests.length})
+            <span className="flex items-center gap-2">
+              <Users className="w-5 h-5" />
+              Unassigned
+            </span>
+            <span className={`text-xs font-normal px-2 py-0.5 rounded-full ${unassignedGuests.length > 0 ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>
+              {unassignedGuests.reduce((sum, g) => sum + (g.partySize || 1), 0)} seats
+            </span>
           </h3>
 
-          <div className="mb-4">
+          <div className="mb-3">
             <div className="relative">
               <Search
                 className={`absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 ${themeConfig.icon.color.secondary}`}
               />
               <input
                 type="text"
-                placeholder="Search guests..."
+                placeholder="Filter guests..."
                 value={guestSearchTerm}
                 onChange={(e) => setGuestSearchTerm(e.target.value)}
-                className={`w-full pl-9 pr-3 py-2 rounded-lg ${themeConfig.input}`}
+                className={`w-full pl-9 pr-3 py-2 text-sm rounded-lg ${themeConfig.input}`}
               />
             </div>
           </div>
 
-          <div className="space-y-2 max-h-96 overflow-y-auto">
+          <div className="text-xs text-stone-400 mb-2 px-1">
+            Drag guests to tables to assign them
+          </div>
+
+          <div className="space-y-1.5 max-h-[500px] overflow-y-auto pr-1">
             {filteredGuests.map((guest) => (
               <DraggableGuest
                 key={guest.id}
@@ -1342,133 +1403,139 @@ export default function SeatingChart() {
               />
             ))}
             {filteredGuests.length === 0 && unassignedGuests.length > 0 && (
-              <p className={`text-sm ${themeConfig.text.body}`}>
-                No guests found matching &ldquo;{guestSearchTerm}&rdquo;
-              </p>
+              <div className="text-center py-4">
+                <p className={`text-sm ${themeConfig.text.muted}`}>
+                  No guests matching &ldquo;{guestSearchTerm}&rdquo;
+                </p>
+              </div>
             )}
             {unassignedGuests.length === 0 && (
-              <p className={`text-sm ${themeConfig.text.body}`}>All guests are assigned!</p>
+              <div className="text-center py-6">
+                <div className="w-10 h-10 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-2">
+                  <Users className="w-5 h-5 text-emerald-600" />
+                </div>
+                <p className={`text-sm font-medium text-emerald-700`}>All guests assigned!</p>
+                <p className="text-xs text-stone-400 mt-1">Every guest has a table</p>
+              </div>
             )}
           </div>
         </div>
 
         {/* Seating Chart Canvas */}
         <div className={`lg:col-span-3 ${themeConfig.card}`}>
-          {/* Enhanced Toolbar */}
-          <div className="space-y-3 mb-4">
-            {/* Zoom Controls */}
-            <div
-              className={`flex items-center gap-2 p-2 rounded-lg ${themeConfig.theme.secondary[100]}`}
-            >
-              <button
-                onClick={handleZoomOut}
-                className={`flex items-center gap-1 px-3 py-1 rounded ${themeConfig.button.secondary}`}
-                title="Zoom Out"
-              >
-                <ZoomOut className="w-4 h-4" />
-              </button>
-              <span
-                className={`text-sm font-medium min-w-[3rem] text-center ${themeConfig.text.body}`}
-              >
-                {Math.round(zoomLevel * 100)}%
-              </span>
-              <button
-                onClick={handleZoomIn}
-                className={`flex items-center gap-1 px-3 py-1 rounded ${themeConfig.button.secondary}`}
-                title="Zoom In"
-              >
-                <ZoomIn className="w-4 h-4" />
-              </button>
-              <button
-                onClick={handleResetZoom}
-                className={`flex items-center gap-1 px-3 py-1 rounded ${themeConfig.button.secondary}`}
-                title="Reset Zoom & Pan"
-              >
-                <RotateCcw className="w-4 h-4" />
-              </button>
-              <div className={`flex items-center gap-1 text-sm ml-4 ${themeConfig.text.body}`}>
-                <Move className="w-4 h-4" />
-                <span>Ctrl+scroll zoom, middle-click pan</span>
+          {/* Toolbar - organized into rows */}
+          <div className="space-y-2 mb-4">
+            {/* Row 1: View Controls */}
+            <div className={`flex items-center gap-1.5 p-2 rounded-lg ${themeConfig.theme.secondary[100]} flex-wrap`}>
+              {/* Zoom */}
+              <div className="flex items-center gap-1 bg-white rounded-lg border border-stone-200 px-1">
+                <button onClick={handleZoomOut} className="p-1.5 hover:bg-stone-100 rounded transition-colors" title="Zoom Out">
+                  <ZoomOut className="w-3.5 h-3.5" />
+                </button>
+                <span className={`text-xs font-medium min-w-[2.5rem] text-center ${themeConfig.text.body}`}>
+                  {Math.round(zoomLevel * 100)}%
+                </span>
+                <button onClick={handleZoomIn} className="p-1.5 hover:bg-stone-100 rounded transition-colors" title="Zoom In">
+                  <ZoomIn className="w-3.5 h-3.5" />
+                </button>
+                <button onClick={handleResetZoom} className="p-1.5 hover:bg-stone-100 rounded transition-colors border-l border-stone-200" title="Reset View">
+                  <RotateCcw className="w-3.5 h-3.5" />
+                </button>
               </div>
-            </div>
 
-            {/* Grid & Feature Controls */}
-            <div className="flex items-center gap-2 flex-wrap">
+              <div className="w-px h-6 bg-stone-300" />
+
+              {/* Grid controls */}
               <button
                 onClick={() => setShowGrid(!showGrid)}
-                className={`flex items-center gap-1 px-3 py-1 rounded text-sm ${showGrid ? themeConfig.button.primary : themeConfig.button.secondary}`}
+                className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${showGrid ? 'bg-emerald-100 text-emerald-700 border border-emerald-300' : 'bg-white text-stone-600 border border-stone-200 hover:bg-stone-50'}`}
                 title="Toggle Grid (G)"
               >
-                <GridIcon className="w-4 h-4" />
+                <GridIcon className="w-3.5 h-3.5" />
                 Grid
               </button>
               <button
                 onClick={() => setSnapToGrid(!snapToGrid)}
-                className={`flex items-center gap-1 px-3 py-1 rounded text-sm ${snapToGrid ? themeConfig.button.primary : themeConfig.button.secondary}`}
-                title="Toggle Snap to Grid (S)"
+                className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${snapToGrid ? 'bg-emerald-100 text-emerald-700 border border-emerald-300' : 'bg-white text-stone-600 border border-stone-200 hover:bg-stone-50'}`}
+                title="Toggle Snap (S)"
               >
-                <Move className="w-4 h-4" />
+                <Move className="w-3.5 h-3.5" />
                 Snap
               </button>
               <select
                 value={gridSize}
                 onChange={(e) => setGridSize(Number(e.target.value))}
-                className={`px-2 py-1 rounded text-sm ${themeConfig.input}`}
+                className="px-2 py-1.5 rounded-lg text-xs bg-white border border-stone-200 text-stone-600"
               >
-                <option value={20}>20px Grid</option>
-                <option value={50}>50px Grid</option>
-                <option value={100}>100px Grid</option>
+                <option value={20}>20px</option>
+                <option value={50}>50px</option>
+                <option value={100}>100px</option>
               </select>
 
-              <div className="w-px h-6 bg-stone-300 mx-1" />
+              <div className="w-px h-6 bg-stone-300" />
 
+              <button
+                onClick={() => setShowMiniMap(!showMiniMap)}
+                className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${showMiniMap ? 'bg-emerald-100 text-emerald-700 border border-emerald-300' : 'bg-white text-stone-600 border border-stone-200 hover:bg-stone-50'}`}
+                title="Toggle Mini-map (M)"
+              >
+                <Map className="w-3.5 h-3.5" />
+                Map
+              </button>
+
+              <div className="flex-1" />
+
+              <span className={`text-xs ${themeConfig.text.muted} hidden md:flex items-center gap-1`}>
+                <Move className="w-3 h-3" />
+                Scroll to pan &middot; Ctrl+scroll to zoom
+              </span>
+            </div>
+
+            {/* Row 2: Layout Tools */}
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {/* Add elements */}
+              <span className="text-xs text-stone-400 font-medium mr-1">Add:</span>
               <button
                 onClick={handleAddLabel}
-                className={`flex items-center gap-1 px-3 py-1 rounded text-sm ${themeConfig.button.secondary}`}
+                className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-white text-stone-600 border border-stone-200 hover:bg-stone-50 transition-colors`}
                 title="Add Label"
               >
-                <Type className="w-4 h-4" />
-                Add Label
+                <Type className="w-3.5 h-3.5" />
+                Label
               </button>
-
               <button
                 onClick={() => handleAddShape('rectangle')}
-                className={`flex items-center gap-1 px-3 py-1 rounded text-sm ${themeConfig.button.secondary}`}
+                className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-white text-stone-600 border border-stone-200 hover:bg-stone-50 transition-colors`}
                 title="Add Rectangle"
               >
-                <Square className="w-4 h-4" />
-                Rectangle
+                <Square className="w-3.5 h-3.5" />
               </button>
-
               <button
                 onClick={() => handleAddShape('circle')}
-                className={`flex items-center gap-1 px-3 py-1 rounded text-sm ${themeConfig.button.secondary}`}
+                className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-white text-stone-600 border border-stone-200 hover:bg-stone-50 transition-colors`}
                 title="Add Circle"
               >
-                <Circle className="w-4 h-4" />
-                Circle
+                <Circle className="w-3.5 h-3.5" />
               </button>
-
               <button
                 onClick={() => handleAddShape('line')}
-                className={`flex items-center gap-1 px-3 py-1 rounded text-sm ${themeConfig.button.secondary}`}
+                className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-white text-stone-600 border border-stone-200 hover:bg-stone-50 transition-colors`}
                 title="Add Line"
               >
-                <Minus className="w-4 h-4" />
-                Line
+                <Minus className="w-3.5 h-3.5" />
               </button>
 
               <div className="relative">
                 <button
                   onClick={() => setShowObjectDropdown(!showObjectDropdown)}
-                  className={`flex items-center gap-1 px-3 py-1 rounded text-sm ${themeConfig.button.secondary}`}
+                  className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-white text-stone-600 border border-stone-200 hover:bg-stone-50 transition-colors`}
                   title="Add Reference Object"
                 >
-                  <Map className="w-4 h-4" />
-                  Add Object
+                  <Map className="w-3.5 h-3.5" />
+                  Objects
                 </button>
                 {showObjectDropdown && (
-                  <div className="absolute top-full left-0 mt-1 bg-white border-2 border-stone-300 rounded-lg shadow-xl z-50 min-w-[180px]">
+                  <div className="absolute top-full left-0 mt-1 bg-white border border-stone-200 rounded-xl shadow-xl z-50 min-w-[180px] py-1">
                     {Object.entries(REFERENCE_OBJECT_CONFIGS).map(([type, config]) => {
                       const Icon = config.icon;
                       return (
@@ -1478,7 +1545,7 @@ export default function SeatingChart() {
                             handleAddReferenceObject(type as ReferenceObject['type']);
                             setShowObjectDropdown(false);
                           }}
-                          className="flex items-center gap-2 w-full text-left px-4 py-2 text-sm text-stone-800 hover:bg-stone-100 transition-colors"
+                          className="flex items-center gap-2 w-full text-left px-3 py-2 text-xs text-stone-700 hover:bg-stone-50 transition-colors"
                         >
                           <Icon className="w-4 h-4" />
                           {config.label}
@@ -1489,59 +1556,36 @@ export default function SeatingChart() {
                 )}
               </div>
 
-              <div className="w-px h-6 bg-stone-300 mx-1" />
+              <div className="w-px h-5 bg-stone-300 mx-0.5" />
 
-              <button
-                onClick={handleAlignLeft}
-                disabled={selectedItems.size < 2}
-                className={`flex items-center gap-1 px-2 py-1 rounded text-sm ${themeConfig.button.secondary} disabled:opacity-50`}
-                title="Align Left"
-              >
-                <AlignLeft className="w-4 h-4" />
+              {/* Alignment */}
+              <span className="text-xs text-stone-400 font-medium mr-1">Align:</span>
+              <button onClick={handleAlignLeft} disabled={selectedItems.size < 2}
+                className="p-1.5 rounded-lg text-stone-500 bg-white border border-stone-200 hover:bg-stone-50 disabled:opacity-30 transition-colors" title="Align Left">
+                <AlignLeft className="w-3.5 h-3.5" />
               </button>
-              <button
-                onClick={handleAlignCenter}
-                disabled={selectedItems.size < 2}
-                className={`flex items-center gap-1 px-2 py-1 rounded text-sm ${themeConfig.button.secondary} disabled:opacity-50`}
-                title="Align Center"
-              >
-                <AlignCenter className="w-4 h-4" />
+              <button onClick={handleAlignCenter} disabled={selectedItems.size < 2}
+                className="p-1.5 rounded-lg text-stone-500 bg-white border border-stone-200 hover:bg-stone-50 disabled:opacity-30 transition-colors" title="Align Center">
+                <AlignCenter className="w-3.5 h-3.5" />
               </button>
-              <button
-                onClick={handleAlignRight}
-                disabled={selectedItems.size < 2}
-                className={`flex items-center gap-1 px-2 py-1 rounded text-sm ${themeConfig.button.secondary} disabled:opacity-50`}
-                title="Align Right"
-              >
-                <AlignRight className="w-4 h-4" />
+              <button onClick={handleAlignRight} disabled={selectedItems.size < 2}
+                className="p-1.5 rounded-lg text-stone-500 bg-white border border-stone-200 hover:bg-stone-50 disabled:opacity-30 transition-colors" title="Align Right">
+                <AlignRight className="w-3.5 h-3.5" />
               </button>
-              <button
-                onClick={handleDistributeVertically}
-                disabled={selectedItems.size < 3}
-                className={`flex items-center gap-1 px-2 py-1 rounded text-sm ${themeConfig.button.secondary} disabled:opacity-50`}
-                title="Distribute Vertically"
-              >
-                <AlignVerticalSpaceAround className="w-4 h-4" />
+              <button onClick={handleDistributeVertically} disabled={selectedItems.size < 3}
+                className="p-1.5 rounded-lg text-stone-500 bg-white border border-stone-200 hover:bg-stone-50 disabled:opacity-30 transition-colors" title="Distribute Vertically">
+                <AlignVerticalSpaceAround className="w-3.5 h-3.5" />
               </button>
+
+              <div className="w-px h-5 bg-stone-300 mx-0.5" />
 
               <button
                 onClick={handleDeleteSelected}
                 disabled={selectedItems.size === 0}
-                className={`flex items-center gap-1 px-2 py-1 rounded text-sm ${themeConfig.button.danger} disabled:opacity-50`}
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium text-rose-600 bg-white border border-stone-200 hover:bg-rose-50 hover:border-rose-200 disabled:opacity-30 transition-colors"
                 title="Delete Selected (Del)"
               >
-                <Trash2 className="w-4 h-4" />
-              </button>
-
-              <div className="w-px h-6 bg-stone-300 mx-1" />
-
-              <button
-                onClick={() => setShowMiniMap(!showMiniMap)}
-                className={`flex items-center gap-1 px-3 py-1 rounded text-sm ${showMiniMap ? themeConfig.button.primary : themeConfig.button.secondary}`}
-                title="Toggle Mini-map (M)"
-              >
-                <Map className="w-4 h-4" />
-                Mini-map
+                <Trash2 className="w-3.5 h-3.5" />
               </button>
             </div>
           </div>
@@ -1818,16 +1862,22 @@ export default function SeatingChart() {
               ))}
 
               {tables.length === 0 && (
-                <div
-                  className={`absolute inset-0 flex items-center justify-center ${themeConfig.empty.container}`}
-                >
-                  <div className="text-center">
-                    <GridIcon
-                      className={`w-12 h-12 mx-auto mb-4 opacity-50 ${themeConfig.empty.icon}`}
-                    />
-                    <p className={themeConfig.empty.text}>
-                      No tables yet. Click &ldquo;Add Table&rdquo; to get started.
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="text-center max-w-xs">
+                    <div className="w-16 h-16 bg-stone-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                      <GridIcon className="w-8 h-8 text-stone-400" />
+                    </div>
+                    <h3 className={`font-semibold mb-2 ${themeConfig.text.heading}`}>No tables yet</h3>
+                    <p className="text-sm text-stone-500 mb-4">
+                      Start building your seating chart by adding tables. You can choose from round, rectangular, and other shapes.
                     </p>
+                    <button
+                      onClick={() => setShowAddTable(true)}
+                      className={`inline-flex items-center gap-2 text-sm ${themeConfig.button.primary}`}
+                    >
+                      <Plus className="w-4 h-4" />
+                      Add Your First Table
+                    </button>
                   </div>
                 </div>
               )}
@@ -1857,15 +1907,20 @@ export default function SeatingChart() {
             )}
           </div>
 
-          {/* Helper Text */}
-          <div className="mt-3 text-xs text-stone-800 space-y-1">
-            <p>• <strong>Keyboard shortcuts:</strong> G (grid), S (snap), M (mini-map), Delete (remove selected), Esc (deselect)</p>
-            <p>• <strong>Selection:</strong> Click items to select, Shift+Click for multi-select</p>
-            <p>• <strong>Drag:</strong> Click and drag labels, shapes, and objects to reposition them</p>
-            <p>• <strong>Resize:</strong> Drag corner handles on selected shapes/objects to resize</p>
-            <p>• <strong>Rotate:</strong> Click blue rotate button on selected items to rotate</p>
-            <p>• <strong>Labels:</strong> Use A-/A+ buttons to change font size, rotate with blue button</p>
-          </div>
+          {/* Collapsible Helper Text */}
+          <details className="mt-3 text-xs text-stone-500">
+            <summary className="cursor-pointer hover:text-stone-700 font-medium transition-colors">
+              Keyboard shortcuts & tips
+            </summary>
+            <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 pl-4">
+              <p><kbd className="px-1.5 py-0.5 bg-stone-100 rounded text-stone-600 font-mono">G</kbd> Toggle grid</p>
+              <p><kbd className="px-1.5 py-0.5 bg-stone-100 rounded text-stone-600 font-mono">S</kbd> Toggle snap</p>
+              <p><kbd className="px-1.5 py-0.5 bg-stone-100 rounded text-stone-600 font-mono">M</kbd> Toggle mini-map</p>
+              <p><kbd className="px-1.5 py-0.5 bg-stone-100 rounded text-stone-600 font-mono">Del</kbd> Delete selected</p>
+              <p><kbd className="px-1.5 py-0.5 bg-stone-100 rounded text-stone-600 font-mono">Esc</kbd> Deselect all</p>
+              <p><kbd className="px-1.5 py-0.5 bg-stone-100 rounded text-stone-600 font-mono">Shift+Click</kbd> Multi-select</p>
+            </div>
+          </details>
         </div>
       </div>
 

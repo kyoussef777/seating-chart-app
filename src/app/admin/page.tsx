@@ -10,7 +10,10 @@ import {
   Users,
   Grid,
   Heart,
-  ShieldCheck
+  ShieldCheck,
+  ExternalLink,
+  Menu,
+  X,
 } from 'lucide-react';
 import { useTheme } from '@/hooks/useTheme';
 import SeatingChart from '@/components/admin/SeatingChart';
@@ -30,6 +33,7 @@ export default function AdminPage() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<Tab>('seating');
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -78,58 +82,98 @@ export default function AdminPage() {
   }
 
   const tabs = [
-    { id: 'seating' as const, name: 'Seating Chart', icon: Grid },
-    { id: 'guests' as const, name: 'Guest List', icon: Users },
-    { id: 'settings' as const, name: 'Event Settings', icon: Settings },
-    { id: 'users' as const, name: 'User Management', icon: ShieldCheck },
+    { id: 'seating' as const, name: 'Seating Chart', shortName: 'Seating', icon: Grid },
+    { id: 'guests' as const, name: 'Guest List', shortName: 'Guests', icon: Users },
+    { id: 'settings' as const, name: 'Event Settings', shortName: 'Settings', icon: Settings },
+    { id: 'users' as const, name: 'User Management', shortName: 'Users', icon: ShieldCheck },
   ];
 
   return (
     <DndProvider backend={HTML5Backend}>
       <div className={`min-h-screen ${themeConfig.theme.components.page.beige}`}>
-        <header className={themeConfig.header.container}>
+        <header className={`${themeConfig.header.container} sticky top-0 z-40`}>
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex justify-between items-center py-4">
+            <div className="flex justify-between items-center py-3">
               <div className="flex items-center gap-3">
-                <div className={`w-10 h-10 ${themeConfig.icon.primary}`}>
-                  <Heart className="w-5 h-5 fill-current" />
+                <div className={`w-9 h-9 ${themeConfig.icon.primary}`}>
+                  <Heart className="w-4 h-4 fill-current" />
                 </div>
                 <div>
-                  <h1 className={`text-xl font-bold ${themeConfig.header.text}`}>Event Admin</h1>
-                  <p className={`text-sm ${themeConfig.text.muted}`}>Welcome, {user.username}</p>
+                  <h1 className={`text-lg font-bold ${themeConfig.header.text}`}>Event Admin</h1>
+                  <p className={`text-xs ${themeConfig.text.muted} hidden sm:block`}>Logged in as {user.username}</p>
                 </div>
               </div>
 
-              <div className="flex items-center gap-4">
+              {/* Desktop actions */}
+              <div className="hidden sm:flex items-center gap-2">
                 <a
                   href="/"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className={`px-3 py-2 text-sm font-medium ${themeConfig.header.link}`}
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg ${themeConfig.header.link} hover:bg-stone-100 transition-colors`}
                 >
-                  View Guest Portal
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  Guest Portal
                 </a>
                 <button
                   onClick={handleLogout}
-                  className={`inline-flex items-center gap-2 px-3 py-2 text-sm font-medium ${themeConfig.header.link}`}
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg ${themeConfig.header.link} hover:bg-stone-100 transition-colors`}
                 >
-                  <LogOut className="w-4 h-4" />
+                  <LogOut className="w-3.5 h-3.5" />
                   Logout
                 </button>
               </div>
+
+              {/* Mobile menu button */}
+              <button
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                className="sm:hidden p-2 rounded-lg hover:bg-stone-100 transition-colors"
+              >
+                {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+              </button>
             </div>
 
-            <nav className="flex space-x-8">
+            {/* Mobile dropdown menu */}
+            {mobileMenuOpen && (
+              <div className="sm:hidden pb-3 border-t border-stone-200 pt-3 animate-fadeIn">
+                <div className="flex flex-col gap-1">
+                  <a
+                    href="/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={`inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg ${themeConfig.header.link} hover:bg-stone-100`}
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                    View Guest Portal
+                  </a>
+                  <button
+                    onClick={handleLogout}
+                    className={`inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg ${themeConfig.header.link} hover:bg-stone-100 text-left`}
+                  >
+                    <LogOut className="w-4 h-4" />
+                    Logout
+                  </button>
+                  <p className={`text-xs ${themeConfig.text.muted} px-3 pt-1`}>Logged in as {user.username}</p>
+                </div>
+              </div>
+            )}
+
+            {/* Tab navigation - scrollable on mobile */}
+            <nav className="flex overflow-x-auto scrollbar-hide -mb-px">
               {tabs.map((tab) => {
                 const Icon = tab.icon;
                 return (
                   <button
                     key={tab.id}
-                    onClick={() => setActiveTab(tab.id)}
-                    className={activeTab === tab.id ? themeConfig.tab.active : themeConfig.tab.inactive}
+                    onClick={() => {
+                      setActiveTab(tab.id);
+                      setMobileMenuOpen(false);
+                    }}
+                    className={`${activeTab === tab.id ? themeConfig.tab.active : themeConfig.tab.inactive} whitespace-nowrap flex items-center gap-1.5 text-sm`}
                   >
                     <Icon className="w-4 h-4" />
-                    {tab.name}
+                    <span className="hidden sm:inline">{tab.name}</span>
+                    <span className="sm:hidden">{tab.shortName}</span>
                   </button>
                 );
               })}
@@ -137,7 +181,7 @@ export default function AdminPage() {
           </div>
         </header>
 
-        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           {activeTab === 'seating' && <SeatingChart />}
           {activeTab === 'guests' && <GuestList />}
           {activeTab === 'settings' && <EventSettings />}

@@ -305,21 +305,24 @@ export default function GuestList() {
     );
   }
 
+  const assignedCount = guests.filter(g => g.tableId).length;
+  const unassignedCount = guests.filter(g => !g.tableId).length;
+
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
+    <div className="space-y-4">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <h2 className={`text-2xl ${themeConfig.text.heading}`}>Guest Management</h2>
         <div className="flex gap-2">
           <button
             onClick={() => setShowImport(true)}
-            className={`inline-flex items-center gap-2 ${themeConfig.button.secondary}`}
+            className={`inline-flex items-center gap-1.5 text-sm ${themeConfig.button.secondary}`}
           >
             <Upload className="w-4 h-4" />
             Import CSV
           </button>
           <button
             onClick={() => setShowAddGuest(true)}
-            className={`inline-flex items-center gap-2 ${themeConfig.button.primary}`}
+            className={`inline-flex items-center gap-1.5 text-sm ${themeConfig.button.primary}`}
           >
             <Plus className="w-4 h-4" />
             Add Guest
@@ -327,18 +330,41 @@ export default function GuestList() {
         </div>
       </div>
 
-      {/* Search */}
-      <div className={themeConfig.card}>
-        <div className="relative">
-          <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 ${themeConfig.icon.color.secondary}`} />
-          <input
-            type="text"
-            placeholder="Search guests by name, phone, or address..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className={`${themeConfig.input} pl-10 pr-4`}
-          />
+      {/* Stats Summary */}
+      {guests.length > 0 && (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="bg-white rounded-xl p-3 border border-stone-200 shadow-sm">
+            <div className={`text-xs ${themeConfig.text.muted} mb-0.5`}>Total Guests</div>
+            <div className={`text-xl font-bold ${themeConfig.text.heading}`}>{guests.length}</div>
+            <div className="text-xs text-stone-400">{getTotalPeople(guests)} people</div>
+          </div>
+          <div className="bg-white rounded-xl p-3 border border-stone-200 shadow-sm">
+            <div className={`text-xs ${themeConfig.text.muted} mb-0.5`}>Assigned</div>
+            <div className="text-xl font-bold text-emerald-600">{assignedCount}</div>
+          </div>
+          <div className="bg-white rounded-xl p-3 border border-stone-200 shadow-sm">
+            <div className={`text-xs ${themeConfig.text.muted} mb-0.5`}>Unassigned</div>
+            <div className={`text-xl font-bold ${unassignedCount > 0 ? 'text-amber-600' : 'text-emerald-600'}`}>{unassignedCount}</div>
+          </div>
+          <div className="bg-white rounded-xl p-3 border border-stone-200 shadow-sm">
+            <div className={`text-xs ${themeConfig.text.muted} mb-0.5`}>Avg Party Size</div>
+            <div className={`text-xl font-bold ${themeConfig.text.heading}`}>
+              {guests.length > 0 ? (getTotalPeople(guests) / guests.length).toFixed(1) : '0'}
+            </div>
+          </div>
         </div>
+      )}
+
+      {/* Search */}
+      <div className="relative">
+        <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 ${themeConfig.icon.color.secondary}`} />
+        <input
+          type="text"
+          placeholder="Search guests by name, phone, or address..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className={`${themeConfig.input} pl-10 pr-4`}
+        />
       </div>
 
       {/* Bulk Actions Bar */}
