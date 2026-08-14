@@ -26,12 +26,15 @@ const playfairDisplay = Playfair_Display({
 });
 
 export const metadata: Metadata = {
+  // Absolute URLs for OG images; Vercel sets VERCEL_PROJECT_PRODUCTION_URL itself.
+  metadataBase: new URL(
+    process.env.VERCEL_PROJECT_PRODUCTION_URL
+      ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+      : 'http://localhost:3000'
+  ),
   title: "Mira & Kamal's Engagement",
   description: "Find your table assignment for Mira & Kamal's engagement celebration",
-  icons: {
-    icon: '/logo-bg.png',
-    apple: '/logo-bg.png',
-  },
+  // Icons come from src/app/icon.png + favicon.ico via Next's file convention.
   openGraph: {
     title: "Mira & Kamal's Engagement",
     description: "Find your table assignment for Mira & Kamal's engagement celebration",
@@ -46,10 +49,6 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <head>
-        <link rel="icon" href="/logo-bg.png" type="image/png" />
-        <link rel="apple-touch-icon" href="/logo-bg.png" />
-      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${fleurDeLeah.variable} ${playfairDisplay.variable} antialiased`}
         suppressHydrationWarning

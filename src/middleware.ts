@@ -6,30 +6,31 @@ export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Determine which rate limit to apply based on the path
-  let rateLimitConfig;
-  const rateLimitKey = getClientIp(request.headers);
+  let bucket: keyof typeof RATE_LIMITS;
 
   // Authentication endpoints - strictest limits
   if (pathname.startsWith('/api/auth/login')) {
-    rateLimitConfig = RATE_LIMITS.auth;
-    // Use username if provided in body for more accurate tracking
-    // For now, use IP-based rate limiting
+    bucket = 'auth';
   }
   // CSV import endpoints - very strict
   else if (pathname.includes('/import')) {
-    rateLimitConfig = RATE_LIMITS.import;
+    bucket = 'import';
   }
   // Other API endpoints - moderate limits
   else if (pathname.startsWith('/api/')) {
-    rateLimitConfig = RATE_LIMITS.api;
+    bucket = 'api';
   }
   // Skip rate limiting for non-API routes
   else {
     return NextResponse.next();
   }
 
+  // Namespace by bucket: otherwise normal API traffic burns the much smaller
+  // login budget for everyone sharing an IP.
+  const rateLimitKey = `${bucket}:${getClientIp(request.headers)}`;
+
   // Apply rate limiting
-  const result = checkRateLimit(rateLimitKey, rateLimitConfig);
+  const result = checkRateLimit(rateLimitKey, RATE_LIMITS[bucket]);
 
   // Add rate limit headers to response
   const response = result.success

@@ -33,25 +33,25 @@ export default function AdminPage() {
   const router = useRouter();
 
   useEffect(() => {
-    checkAuth();
-  }, []);
+    const checkAuth = async () => {
+      try {
+        const response = await fetch('/api/auth/me');
+        const data = await response.json();
 
-  const checkAuth = async () => {
-    try {
-      const response = await fetch('/api/auth/me');
-      const data = await response.json();
-
-      if (data.user) {
-        setUser(data.user);
-      } else {
+        if (data.user) {
+          setUser(data.user);
+        } else {
+          router.push('/admin/login');
+        }
+      } catch {
         router.push('/admin/login');
+      } finally {
+        setLoading(false);
       }
-    } catch {
-      router.push('/admin/login');
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
+
+    checkAuth();
+  }, [router]);
 
   const handleLogout = async () => {
     try {

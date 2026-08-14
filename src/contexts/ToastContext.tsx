@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useCallback, useMemo, ReactNode } from 'react';
 import { ToastContainer } from '@/components/ToastContainer';
 import { ToastType } from '@/components/Toast';
 
@@ -51,8 +51,14 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     showToast('info', message, duration);
   }, [showToast]);
 
+  // Stable identity: consumers put `toast` in effect dependency arrays.
+  const value = useMemo(
+    () => ({ showToast, success, error, warning, info }),
+    [showToast, success, error, warning, info]
+  );
+
   return (
-    <ToastContext.Provider value={{ showToast, success, error, warning, info }}>
+    <ToastContext.Provider value={value}>
       {children}
       <ToastContainer toasts={toasts} onClose={removeToast} />
     </ToastContext.Provider>

@@ -265,7 +265,7 @@ export default function GuestList() {
       toast.success(`Deleted ${selectedGuests.size} guest(s) successfully`);
       setSelectedGuests(new Set());
       fetchGuests();
-    } catch (error) {
+    } catch {
       toast.error('Failed to delete some guests');
     }
   };
@@ -291,7 +291,7 @@ export default function GuestList() {
       setSelectedGuests(new Set());
       setShowBulkActions(false);
       fetchGuests();
-    } catch (error) {
+    } catch {
       toast.error('Failed to assign some guests');
     }
   };

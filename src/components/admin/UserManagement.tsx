@@ -29,25 +29,25 @@ export default function UserManagement() {
   const [newUser, setNewUser] = useState({ username: '', password: '' });
 
   useEffect(() => {
-    fetchUsers();
-  }, []);
-
-  const fetchUsers = async () => {
-    try {
-      const response = await fetch('/api/users');
-      const data = await response.json();
-      if (response.ok) {
-        setUsers(data.users);
-      } else {
+    const fetchUsers = async () => {
+      try {
+        const response = await fetch('/api/users');
+        const data = await response.json();
+        if (response.ok) {
+          setUsers(data.users);
+        } else {
+          toast.error('Failed to load users');
+        }
+      } catch (error) {
+        console.error('Failed to fetch users:', error);
         toast.error('Failed to load users');
+      } finally {
+        setLoading(false);
       }
-    } catch (error) {
-      console.error('Failed to fetch users:', error);
-      toast.error('Failed to load users');
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
+
+    fetchUsers();
+  }, [toast]);
 
   const handleStartEdit = useCallback((user: User) => {
     setEditingUserId(user.id);

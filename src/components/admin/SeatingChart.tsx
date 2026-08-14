@@ -34,7 +34,6 @@ import {
   LucideIcon,
   FileSpreadsheet,
 } from 'lucide-react';
-import * as XLSX from 'xlsx';
 import { useTheme } from '@/hooks/useTheme';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useToast } from '@/contexts/ToastContext';
@@ -276,7 +275,7 @@ export default function SeatingChart() {
   }, [showGrid, snapToGrid, gridSize, showMiniMap, labels, shapes, referenceObjects, toast]);
 
   // Export seating chart to Excel
-  const exportToExcel = useCallback(() => {
+  const exportToExcel = useCallback(async () => {
     try {
       // Prepare data for Excel
       const excelData: (string | number)[][] = [];
@@ -341,6 +340,9 @@ export default function SeatingChart() {
           ]);
         });
       }
+
+      // Loaded on demand: ~400kB that only the export button needs.
+      const XLSX = await import('xlsx');
 
       // Create workbook and worksheet
       const wb = XLSX.utils.book_new();
