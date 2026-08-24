@@ -116,6 +116,18 @@ export async function PUT(request: NextRequest) {
           { status: 403 }
         );
       }
+
+      // Honour the admin's address-collection toggle here too, so turning it off
+      // actually closes the endpoint rather than just hiding the form.
+      if (address !== undefined) {
+        const [settings] = await db.select().from(eventSettings).limit(1);
+        if (settings && !settings.addressCollectionEnabled) {
+          return NextResponse.json(
+            { error: 'Address collection is currently turned off' },
+            { status: 403 }
+          );
+        }
+      }
     }
 
     if (!id || typeof id !== 'string') {

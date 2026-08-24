@@ -31,9 +31,14 @@ export async function GET() {
 export async function PUT(request: NextRequest) {
   try {
     await requireAuth();
-    const { eventName, homePageText, searchEnabled } = await request.json();
+    const { eventName, homePageText, searchEnabled, addressCollectionEnabled } = await request.json();
 
-    if (eventName === undefined && homePageText === undefined && searchEnabled === undefined) {
+    if (
+      eventName === undefined &&
+      homePageText === undefined &&
+      searchEnabled === undefined &&
+      addressCollectionEnabled === undefined
+    ) {
       return NextResponse.json(
         { error: 'At least one field is required' },
         { status: 400 }
@@ -51,11 +56,14 @@ export async function PUT(request: NextRequest) {
         eventName?: string;
         homePageText?: string;
         searchEnabled?: boolean;
+        addressCollectionEnabled?: boolean;
         updatedAt: Date;
       } = { updatedAt: new Date() };
       if (eventName !== undefined) updateData.eventName = eventName;
       if (homePageText !== undefined) updateData.homePageText = homePageText;
       if (searchEnabled !== undefined) updateData.searchEnabled = searchEnabled;
+      if (addressCollectionEnabled !== undefined)
+        updateData.addressCollectionEnabled = addressCollectionEnabled;
 
       [updatedSettings] = await db
         .update(eventSettings)
@@ -68,6 +76,8 @@ export async function PUT(request: NextRequest) {
         eventName: eventName || 'Our Special Day',
         homePageText: homePageText || 'Welcome to our wedding! Please find your table below.',
         searchEnabled: searchEnabled !== undefined ? searchEnabled : true,
+        addressCollectionEnabled:
+          addressCollectionEnabled !== undefined ? addressCollectionEnabled : true,
       }).returning();
     }
 

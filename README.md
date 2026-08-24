@@ -41,10 +41,13 @@ npm install
 ### 2. Database Setup
 1. Create a [Neon](https://neon.tech/) database
 2. Copy your database URL from Neon dashboard
-3. Create `.env.local` file:
+3. Create your `.env` file:
+```bash
+cp .env.example .env
 ```
-DATABASE_URL=your_neon_database_url_here
-JWT_SECRET=your_secure_jwt_secret_here
+Then fill in `DATABASE_URL` (from the Neon dashboard) and `JWT_SECRET`:
+```bash
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 ```
 
 ### 3. Initialize Database
@@ -62,11 +65,11 @@ Visit:
 - **Guest Portal**: http://localhost:3000
 - **Admin Portal**: http://localhost:3000/admin/login
 
-## Default Admin Credentials
+## Admin Credentials
 
-After running `npm run create-admin`:
-- **Username**: `admin`
-- **Password**: `admin123`
+`npm run create-admin` prompts for a username and password (minimum 8 characters),
+or takes them as arguments: `npm run create-admin -- myuser 'my-password'`.
+Re-running it for an existing username resets that user's password.
 
 ⚠️ **Important**: Change the default password after first login!
 
@@ -167,7 +170,7 @@ seating-chart-app/
 │       ├── schema.ts         # Database schema
 │       └── utils.ts          # Utility functions
 ├── scripts/
-│   └── create-admin.js       # Admin user creation script
+│   └── create-admin.mjs      # Admin user creation script
 ├── drizzle.config.ts         # Database configuration
 └── package.json
 ```
@@ -175,7 +178,7 @@ seating-chart-app/
 ## Troubleshooting
 
 ### Database Connection Issues
-- Verify your `DATABASE_URL` in `.env.local`
+- Verify your `DATABASE_URL` in `.env`
 - Ensure Neon database is active and accessible
 - Check network connectivity
 

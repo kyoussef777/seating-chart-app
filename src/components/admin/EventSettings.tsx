@@ -9,6 +9,7 @@ interface EventSettings {
   eventName: string;
   homePageText: string;
   searchEnabled: boolean;
+  addressCollectionEnabled: boolean;
   updatedAt: string;
 }
 
@@ -19,6 +20,7 @@ export default function EventSettings() {
     eventName: 'Our Special Day',
     homePageText: 'Welcome to our wedding! Please find your table below.',
     searchEnabled: true,
+    addressCollectionEnabled: true,
     updatedAt: '',
   });
   const [loading, setLoading] = useState(true);
@@ -58,6 +60,7 @@ export default function EventSettings() {
           eventName: settings.eventName.trim(),
           homePageText: settings.homePageText.trim(),
           searchEnabled: settings.searchEnabled,
+          addressCollectionEnabled: settings.addressCollectionEnabled,
         }),
       });
 
@@ -165,6 +168,41 @@ export default function EventSettings() {
                   <span
                     className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
                       settings.searchEnabled ? 'translate-x-6' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between">
+                <div>
+                  <label htmlFor="addressCollectionEnabled" className={themeConfig.text.label}>
+                    Ask Guests for Their Address
+                  </label>
+                  <p className={`text-xs ${themeConfig.text.muted} mt-1`}>
+                    When on, a guest who has no address on file is asked for one after
+                    finding their table. Turn off once you have the addresses you need.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  role="switch"
+                  id="addressCollectionEnabled"
+                  aria-checked={settings.addressCollectionEnabled}
+                  onClick={() =>
+                    setSettings({
+                      ...settings,
+                      addressCollectionEnabled: !settings.addressCollectionEnabled,
+                    })
+                  }
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 ${
+                    settings.addressCollectionEnabled ? 'bg-emerald-600' : 'bg-stone-300'
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      settings.addressCollectionEnabled ? 'translate-x-6' : 'translate-x-1'
                     }`}
                   />
                 </button>

@@ -12,6 +12,7 @@ export const eventSettings = pgTable('event_settings', {
   eventName: text('event_name').notNull().default("Mira & Kamal's Engagement"),
   homePageText: text('home_page_text').notNull().default('Welcome to our engagement! Please find your table below.'),
   searchEnabled: boolean('search_enabled').notNull().default(true),
+  addressCollectionEnabled: boolean('address_collection_enabled').notNull().default(true),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 

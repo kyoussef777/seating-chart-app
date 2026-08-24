@@ -3,6 +3,15 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useDrop } from 'react-dnd';
 import {
+  CANVAS_HEIGHT,
+  CANVAS_WIDTH,
+  clampToCanvas,
+  fetchSeating,
+  getTableDimensions,
+  persistAssignment,
+  seatsAvailable,
+} from '@/lib/seating';
+import {
   Plus,
   Users,
   Grid as GridIcon,
@@ -149,6 +158,11 @@ export default function SeatingChart() {
   const [isPanning, setIsPanning] = useState(false);
   const [lastPanPoint, setLastPanPoint] = useState({ x: 0, y: 0 });
   const chartRef = useRef<HTMLDivElement>(null);
+
+  // Mirrors of state so applyAssignment can stay identity-stable while still
+  // reading current values (a guest may live in either collection).
+  const tablesRef = useRef<Table[]>([]);
+  const unassignedGuestsRef = useRef<Guest[]>([]);
   const canvasRef = useRef<HTMLDivElement>(null);
 
   // Close dropdown when clicking outside
@@ -393,15 +407,15 @@ export default function SeatingChart() {
         if (!monitor.didDrop() && item.type === 'table') {
           const dropOffset = monitor.getClientOffset();
           const canvasRect = chartRef.current?.getBoundingClientRect();
+          const dropped = tablesRef.current.find((t) => t.id === item.id);
 
-          if (dropOffset && canvasRect) {
-            // Account for zoom and pan when calculating drop position
-            const x = snapPosition(
-              Math.max(0, (dropOffset.x - canvasRect.left - panOffset.x) / zoomLevel - 50)
-            );
-            const y = snapPosition(
-              Math.max(0, (dropOffset.y - canvasRect.top - panOffset.y) / zoomLevel - 40)
-            );
+          if (dropOffset && canvasRect && dropped) {
+            // Centre the table under the cursor using its real dimensions
+            // (shapes range 80-200px wide), then keep it inside the floor plan.
+            const { width, height } = getTableDimensions(dropped.shape);
+            const rawX = (dropOffset.x - canvasRect.left - panOffset.x) / zoomLevel - width / 2;
+            const rawY = (dropOffset.y - canvasRect.top - panOffset.y) / zoomLevel - height / 2;
+            const { x, y } = clampToCanvas(snapPosition(rawX), snapPosition(rawY), dropped.shape);
             handleSetTablePosition(item.id, x, y);
           }
         }
@@ -482,88 +496,59 @@ export default function SeatingChart() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [selectedItems, handleDeleteSelected]);
 
-  const fetchTablesAndGuests = useCallback(async () => {
+  useEffect(() => {
+    tablesRef.current = tables;
+  }, [tables]);
+
+  useEffect(() => {
+    unassignedGuestsRef.current = unassignedGuests;
+  }, [unassignedGuests]);
+
+  const loadSeating = useCallback(async (initial = false) => {
     try {
-      const [tablesResponse, guestsResponse] = await Promise.all([
-        fetch('/api/tables'),
-        fetch('/api/guests'),
-      ]);
-
-      const [tablesData, guestsData] = await Promise.all([
-        tablesResponse.json(),
-        guestsResponse.json(),
-      ]);
-
-      if (tablesResponse.ok && guestsResponse.ok) {
-        const guestsByTable: { [key: string]: Guest[] } = {};
-        const unassigned: Guest[] = [];
-
-        guestsData.guests.forEach((guest: Guest) => {
-          if (guest.tableId) {
-            if (!guestsByTable[guest.tableId]) {
-              guestsByTable[guest.tableId] = [];
-            }
-            guestsByTable[guest.tableId].push(guest);
-          } else {
-            unassigned.push(guest);
-          }
-        });
-
-        const tablesWithGuests = tablesData.tables.map((table: Table) => ({
-          ...table,
-          rotation: table.rotation || 0,
-          guests: guestsByTable[table.id] || [],
-        }));
-
-        setTables(tablesWithGuests);
-        setUnassignedGuests(unassigned);
-      }
+      const { tables: withGuests, unassigned } = await fetchSeating();
+      setTables(withGuests);
+      setUnassignedGuests(unassigned);
     } catch (error) {
-      console.error('Failed to fetch data:', error);
+      console.error('Failed to load seating data:', error);
     } finally {
-      setLoading(false);
+      if (initial) setLoading(false);
     }
   }, []);
 
-  const refreshData = useCallback(async () => {
-    try {
-      const [tablesResponse, guestsResponse] = await Promise.all([
-        fetch('/api/tables'),
-        fetch('/api/guests'),
-      ]);
+  const fetchTablesAndGuests = useCallback(() => loadSeating(true), [loadSeating]);
+  const refreshData = useCallback(() => loadSeating(false), [loadSeating]);
 
-      const [tablesData, guestsData] = await Promise.all([
-        tablesResponse.json(),
-        guestsResponse.json(),
-      ]);
-
-      if (tablesResponse.ok && guestsResponse.ok) {
-        const guestsByTable: { [key: string]: Guest[] } = {};
-        const unassigned: Guest[] = [];
-
-        guestsData.guests.forEach((guest: Guest) => {
-          if (guest.tableId) {
-            if (!guestsByTable[guest.tableId]) {
-              guestsByTable[guest.tableId] = [];
-            }
-            guestsByTable[guest.tableId].push(guest);
-          } else {
-            unassigned.push(guest);
-          }
-        });
-
-        const tablesWithGuests = tablesData.tables.map((table: Table) => ({
-          ...table,
-          rotation: table.rotation || 0,
-          guests: guestsByTable[table.id] || [],
-        }));
-
-        setTables(tablesWithGuests);
-        setUnassignedGuests(unassigned);
+  /** Move a guest between tables in local state so the UI responds instantly;
+   *  the server call reconciles afterwards. */
+  const applyAssignment = useCallback((guestId: string, tableId: string | null) => {
+    setTables((prevTables) => {
+      let moving = prevTables.flatMap((t) => t.guests).find((g) => g.id === guestId);
+      if (!moving) {
+        moving = unassignedGuestsRef.current.find((g) => g.id === guestId);
       }
-    } catch (error) {
-      console.error('Failed to refresh data:', error);
-    }
+      if (!moving) return prevTables;
+      const updated = { ...moving, tableId };
+
+      return prevTables.map((t) => {
+        const without = t.guests.filter((g) => g.id !== guestId);
+        if (t.id === tableId) {
+          return { ...t, guests: [...without, updated].sort((a, b) => a.name.localeCompare(b.name)) };
+        }
+        return without.length === t.guests.length ? t : { ...t, guests: without };
+      });
+    });
+
+    setUnassignedGuests((prev) => {
+      const existing = prev.find((g) => g.id === guestId);
+      if (tableId === null) {
+        if (existing) return prev;
+        const seated = tablesRef.current.flatMap((t) => t.guests).find((g) => g.id === guestId);
+        if (!seated) return prev;
+        return [...prev, { ...seated, tableId: null }].sort((a, b) => a.name.localeCompare(b.name));
+      }
+      return existing ? prev.filter((g) => g.id !== guestId) : prev;
+    });
   }, []);
 
   const handleAddTable = async (e: React.FormEvent) => {
@@ -598,8 +583,10 @@ export default function SeatingChart() {
   };
 
   const handleSetTablePosition = async (tableId: string, newX: number, newY: number) => {
-    const snappedX = snapPosition(newX);
-    const snappedY = snapPosition(newY);
+    // Callers snap before clamping; clamp again here so any other entry point
+    // (auto-arrange, keyboard nudge) also stays inside the floor plan.
+    const shape = tablesRef.current.find((t) => t.id === tableId)?.shape || 'round';
+    const { x: snappedX, y: snappedY } = clampToCanvas(newX, newY, shape);
 
     try {
       const response = await fetch('/api/tables', {
@@ -922,78 +909,58 @@ export default function SeatingChart() {
 
   const handleAssignGuest = useCallback(
     async (guestId: string, tableId: string) => {
-      const guest = unassignedGuests.find((g) => g.id === guestId);
       const table = tables.find((t) => t.id === tableId);
+      // Look across seated guests too: a guest being moved between tables is
+      // not in unassignedGuests, which previously made this fail silently.
+      const guest =
+        unassignedGuests.find((g) => g.id === guestId) ||
+        tables.flatMap((t) => t.guests).find((g) => g.id === guestId);
 
       if (!guest || !table) {
-        console.error('Guest or table not found');
+        toast.error('That guest or table could no longer be found. Refreshing…');
+        await refreshData();
         return;
       }
 
-      const seatsUsed = table.guests.reduce((total, g) => total + (g.partySize || 1), 0);
-      const availableSeats = table.capacity - seatsUsed;
-      const partySize = guest.partySize || 1;
+      if (guest.tableId === tableId) return; // no-op
 
-      if (availableSeats < partySize) {
+      const partySize = guest.partySize || 1;
+      const available = seatsAvailable(table, guestId);
+      if (available < partySize) {
         toast.error(
-          `Not enough space! This party needs ${partySize} seat${partySize > 1 ? 's' : ''} but only ${availableSeats} seat${availableSeats !== 1 ? 's' : ''} available at ${table.name}.`
+          `Not enough space at ${table.name}. ${guest.name} needs ${partySize} seat${partySize > 1 ? 's' : ''} but only ${available} ${available === 1 ? 'is' : 'are'} free.`
         );
         return;
       }
 
-      try {
-        const response = await fetch('/api/guests', {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            id: guestId,
-            tableId,
-          }),
-        });
+      const from = guest.tableId;
+      applyAssignment(guestId, tableId);
 
-        if (response.ok) {
-          await refreshData();
-          toast.success(`${guest.name} assigned to ${table.name}`);
-        } else {
-          const errorData = await response.json();
-          toast.error(`Failed to assign guest: ${errorData.error || 'Unknown error'}`);
-          await refreshData();
-        }
-      } catch (error) {
-        console.error('Failed to assign guest:', error);
-        toast.error('Failed to assign guest. Please try again.');
+      const result = await persistAssignment(guestId, tableId);
+      if (result.ok) {
+        toast.success(
+          from ? `${guest.name} moved to ${table.name}` : `${guest.name} seated at ${table.name}`
+        );
+      } else {
+        toast.error(result.error);
         await refreshData();
       }
     },
-    [unassignedGuests, tables, refreshData, toast]
+    [unassignedGuests, tables, refreshData, applyAssignment, toast]
   );
 
   const handleUnassignGuest = useCallback(
     async (guestId: string) => {
-      try {
-        const response = await fetch('/api/guests', {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            id: guestId,
-            tableId: null,
-          }),
-        });
-
-        if (response.ok) {
-          await refreshData();
-          toast.success('Guest unassigned');
-        }
-      } catch (error) {
-        console.error('Failed to unassign guest:', error);
-        toast.error('Failed to unassign guest');
+      applyAssignment(guestId, null);
+      const result = await persistAssignment(guestId, null);
+      if (result.ok) {
+        toast.success('Guest unassigned');
+      } else {
+        toast.error(result.error);
+        await refreshData();
       }
     },
-    [refreshData, toast]
+    [applyAssignment, refreshData, toast]
   );
 
   const handleRotateTable = useCallback(
@@ -1554,8 +1521,11 @@ export default function SeatingChart() {
               chartRef.current = el;
               drop(el);
             }}
-            className={`relative rounded-lg min-h-[600px] border-2 border-dashed overflow-hidden ${isPanning ? 'cursor-grabbing' : 'cursor-default'} bg-stone-50`}
-            style={{ position: 'relative' }}
+            className={`relative rounded-lg border-2 border-dashed overflow-hidden ${isPanning ? 'cursor-grabbing' : 'cursor-default'} bg-stone-200/60`}
+            /* Fixed viewport onto the floor plan: the inner surface keeps its
+               unscaled layout size, so without an explicit height the container
+               stretched to the full 1500px canvas and left dead space below. */
+            style={{ position: 'relative', height: 'min(72vh, 760px)', minHeight: '480px' }}
             onMouseDown={handleMouseDown}
             onMouseMove={handleMouseMove}
             onMouseUp={handleMouseUp}
@@ -1567,10 +1537,13 @@ export default function SeatingChart() {
               style={{
                 transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoomLevel})`,
                 transformOrigin: '0 0',
-                width: '100%',
-                height: '100%',
-                minHeight: '600px',
+                // Explicit floor-plan surface. Previously 100%/100%, which under
+                // scale() left dead background that still accepted drops.
+                width: `${CANVAS_WIDTH}px`,
+                height: `${CANVAS_HEIGHT}px`,
                 position: 'relative',
+                background: '#ffffff',
+                boxShadow: '0 0 0 1px rgba(120,113,108,.25)',
                 transition: isPanning || draggedItem || resizingItem || rotatingItem ? 'none' : 'transform 0.1s ease-out',
               }}
             >
@@ -1585,8 +1558,8 @@ export default function SeatingChart() {
                     `,
                     backgroundSize: `${gridSize}px ${gridSize}px`,
                     opacity: 0.4,
-                    width: '2000px',
-                    height: '2000px',
+                    width: `${CANVAS_WIDTH}px`,
+                    height: `${CANVAS_HEIGHT}px`,
                   }}
                 />
               )}

@@ -18,6 +18,7 @@ npm start
 
 # Code quality
 npm run lint
+npm test               # node:test, runs src/**/*.test.ts directly
 
 # Database operations
 npm run db:generate    # Generate migrations from schema changes
@@ -40,27 +41,35 @@ npm run create-admin   # Create admin user interactively
 - **File Processing**: PapaParse for CSV import
 
 ### Database Schema
-The application uses Drizzle ORM with four main tables:
+The application uses Drizzle ORM with these tables:
 - `users` - Admin authentication
-- `eventSettings` - Event configuration (name, homepage text)
+- `eventSettings` - Event configuration (name, homepage text, search toggle, address-collection toggle)
 - `tables` - Seating arrangements with position coordinates
-- `guests` - Guest information with optional table assignments
+- `guests` - Guest information, party size, optional table assignment
+- `labels`, `shapes`, `referenceObjects` - Floor-plan decoration layer
 
 Key relationship: `guests.tableId` → `tables.id` (nullable, cascades to null on delete)
 
 ### Application Structure
 
 **Dual Interface Design:**
-- **Guest Portal** (`/`): Autocomplete search, table lookup, address collection
-- **Admin Dashboard** (`/admin`): Drag-and-drop seating chart, guest management, CSV import
+- **Guest Portal** (`/`): Autocomplete search, table lookup, optional address collection
+- **Admin Dashboard** (`/admin`): Seating chart, Roster, guest management, CSV import
+
+**Admin tabs:** Seating Chart (spatial floor plan), Roster (who is sitting with
+whom — drag guests between tables and the unassigned list), Guest List, Event
+Settings, User Management. Both seating views share `src/lib/seating.ts`, which
+owns capacity maths, canvas bounds and assignment persistence.
 
 **API Routes:**
 - `/api/auth/*` - JWT authentication (login, logout, session validation)
-- `/api/guests` - CRUD operations, CSV import, table assignments (PII protected for public)
-- `/api/guests/details` - Single guest lookup with address (for guest themselves)
-- `/api/tables/*` - Table management with positioning
-- `/api/settings/*` - Event configuration
-- `/api/users/*` - Admin user management (create, update, delete)
+- `/api/guests` - CRUD operations, table assignments (PII stripped for public callers)
+- `/api/guests/import` - CSV import
+- `/api/tables` - Table management with positioning
+- `/api/settings` - Event configuration
+- `/api/users` - Admin user management (create, update, delete)
+- `/api/layout/{labels,shapes,reference-objects}` - Floor-plan decoration layer
+- `/api/csrf` - CSRF token issuance
 
 ### Key Features
 
@@ -90,9 +99,13 @@ Key relationship: `guests.tableId` → `tables.id` (nullable, cascades to null o
 
 ### Environment Setup
 
-Required environment variables:
+Required environment variables (see `.env.example`):
 - `DATABASE_URL` - Neon PostgreSQL connection string
 - `JWT_SECRET` - Secure token signing key
+
+Both are read at request time, not import time, so `next build` succeeds without
+them. They must still be set in Vercel for **both** Production and Preview, or
+every API route will 500 at runtime.
 
 ### CSV Import Format
 
@@ -109,11 +122,18 @@ Uses React DnD with HTML5Backend:
 
 ### Database Migrations
 
-Schema is defined in `/src/lib/schema.ts`. For schema changes:
-1. Modify schema file
-2. Run `npm run db:generate` to create migration
-3. Run `npm run db:migrate` to apply (production)
-4. Or `npm run db:push` for direct schema push (development)
+Schema is defined in `/src/lib/schema.ts`. Migrations live in `/drizzle` and **are
+committed** — the existing database was baselined against `0000_*` (its hash is
+recorded in `drizzle.__drizzle_migrations`), so `db:migrate` is a no-op until a
+new migration is generated.
+
+For schema changes:
+1. Modify `src/lib/schema.ts`
+2. `npm run db:generate` — writes a new incremental migration to `/drizzle`
+3. `npm run db:migrate` — applies it (commit the generated SQL alongside the code)
+
+Prefer this over `db:push`: push diffs straight against the database and leaves no
+record, which is how the schema drifted from the migration history before.
 
 ### Theme Customization
 
