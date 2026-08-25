@@ -5,6 +5,15 @@ import { useDrag, useDrop } from 'react-dnd';
 import { Trash2, Users, X, RotateCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/hooks/useTheme';
+import DraggableGuest from './DraggableGuest';
+import {
+  canSeat,
+  getTableDimensions,
+  seatsAvailable,
+  seatsUsed as sumSeats,
+  type GuestDragItem,
+  type Table as SeatingTable,
+} from '@/lib/seating';
 
 interface Guest {
   id: string;
@@ -35,26 +44,6 @@ interface DraggableTableProps {
   onRename: (tableId: string, newName: string) => void;
   allTableNames: string[];
 }
-
-// Get dimensions for each table shape
-const getTableDimensions = (shape: string) => {
-  switch (shape) {
-    case 'round':
-      return { width: 140, height: 140, isCircular: true };
-    case 'square':
-      return { width: 120, height: 120, isCircular: false };
-    case 'rectangular':
-      return { width: 180, height: 100, isCircular: false };
-    case 'oval':
-      return { width: 160, height: 100, isCircular: true };
-    case 'u-shape':
-      return { width: 200, height: 140, isCircular: false };
-    case 'cocktail':
-      return { width: 80, height: 80, isCircular: true };
-    default:
-      return { width: 140, height: 140, isCircular: true };
-  }
-};
 
 function DraggableTable({
   table,
@@ -154,17 +143,22 @@ function DraggableTable({
     canDrag: true,
   }));
 
-  const [{ isOver }, drop] = useDrop(() => ({
-    accept: 'guest',
-    drop: (item: { id: string; type: string }) => {
-      if (item.type === 'guest') {
+  // Refuse an over-capacity or same-table drop up front, rather than
+  // accepting it and rejecting with an error toast afterwards.
+  const [{ isOver, canDropHere }, drop] = useDrop(
+    () => ({
+      accept: 'guest',
+      canDrop: (item: GuestDragItem) => canSeat(table as SeatingTable, item),
+      drop: (item: GuestDragItem) => {
         onAssignGuest(item.id, table.id);
-      }
-    },
-    collect: (monitor) => ({
-      isOver: monitor.isOver(),
+      },
+      collect: (monitor) => ({
+        isOver: monitor.isOver({ shallow: true }),
+        canDropHere: monitor.canDrop(),
+      }),
     }),
-  }));
+    [table.id, table.capacity, table.guests, onAssignGuest]
+  );
 
   const attachRef = (el: HTMLDivElement | null) => {
     drag(el);
@@ -183,9 +177,9 @@ function DraggableTable({
     transformOrigin: 'center',
   };
 
-  // Calculate seats used based on party sizes
-  const seatsUsed = table.guests.reduce((total, guest) => total + (guest.partySize || 1), 0);
+  const seatsUsed = sumSeats(table.guests);
   const isFull = seatsUsed >= table.capacity;
+  const freeSeats = seatsAvailable(table as SeatingTable);
 
   const isRound = table.shape === 'round';
   const isOval = table.shape === 'oval';
@@ -214,8 +208,8 @@ function DraggableTable({
       className={cn(
         themeConfig.table.default,
         'p-3 relative transition-all duration-200 flex flex-col items-center justify-center',
-        isOver && !isFull ? themeConfig.table.dropTarget : '',
-        isFull && isOver ? themeConfig.table.full : '',
+        isOver && canDropHere ? themeConfig.table.dropTarget : '',
+        isOver && !canDropHere ? themeConfig.table.full : '',
         isDragging ? themeConfig.table.dragging : 'z-0'
       )}
       style={{
@@ -306,10 +300,12 @@ function DraggableTable({
         }}
       >
         <Users className={isCocktail ? 'w-3 h-3' : 'w-4 h-4'} />
-        <span>{seatsUsed}/{table.capacity}</span>
+        <span title={`${freeSeats} seat${freeSeats === 1 ? '' : 's'} free`}>
+          {seatsUsed}/{table.capacity}
+        </span>
         {table.guests.length > 0 && (
           <span className="text-xs opacity-80 ml-1 font-normal">
-            (click)
+            {isFull ? '(full)' : `(${freeSeats} free)`}
           </span>
         )}
       </div>
@@ -382,32 +378,12 @@ function DraggableTable({
           </div>
           <div className="space-y-1 max-h-48 overflow-y-auto">
             {table.guests.map((guest) => (
-              <div
+              <DraggableGuest
                 key={guest.id}
-                className={cn(
-                  'flex items-center justify-between text-sm p-2 rounded group transition-colors',
-                  themeConfig.listItem.default
-                )}
-              >
-                <div className="flex items-center gap-2 flex-1 min-w-0">
-                  <span className={`truncate ${themeConfig.text.body}`}>{guest.name}</span>
-                  {guest.partySize > 1 && (
-                    <span className={`${themeConfig.badge.partySize} flex-shrink-0`}>
-                      +{guest.partySize - 1}
-                    </span>
-                  )}
-                </div>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onUnassignGuest(guest.id);
-                  }}
-                  className={`${themeConfig.button.delete} flex-shrink-0`}
-                  title="Remove from table"
-                >
-                  <Trash2 className="w-3 h-3" />
-                </button>
-              </div>
+                guest={guest}
+                showUnassign
+                onUnassign={() => onUnassignGuest(guest.id)}
+              />
             ))}
           </div>
         </div>

@@ -54,3 +54,35 @@ body {
 .animate-fadeIn {
   animation: fadeIn 0.2s ease-out;
 }
+
+/* ---- Enchanted garden home page (from Claude Design 1b) ---- */
+/* Butterfly wing flap: one shared keyframe; each butterfly sets its own
+   duration (~3.2% of its flight cycle) to match the source design. */
+@keyframes wingflap { 0%, 100% { transform: scaleX(1) } 50% { transform: scaleX(.48) } }
+@keyframes twinkle {0%,100%{opacity:.15;transform:scale(.7)}50%{opacity:.9;transform:scale(1.15)}}
+@keyframes flyb1 {0.0%{transform:translate(0px,0px) rotate(62deg)}13.8%{transform:translate(120px,-40px) rotate(62deg)}28.5%{transform:translate(210px,60px) rotate(60deg)}41.4%{transform:translate(265px,28px) rotate(-62deg)}46.0%{transform:translate(265px,54px) rotate(0deg)}60%{transform:translate(265px,54px) rotate(0deg)}72.8%{transform:translate(140px,120px) rotate(-62deg)}87.2%{transform:translate(40px,60px) rotate(-59deg)}100.0%{transform:translate(0px,0px) rotate(-34deg)}}
+@keyframes flyb2 {0.0%{transform:translate(0px,0px) rotate(-62deg)}12.0%{transform:translate(-140px,50px) rotate(-52deg)}24.8%{transform:translate(-230px,-20px) rotate(62deg)}36.0%{transform:translate(-97px,44px) rotate(-62deg)}40.0%{transform:translate(-97px,70px) rotate(0deg)}56%{transform:translate(-97px,70px) rotate(0deg)}70.1%{transform:translate(-120px,110px) rotate(-62deg)}85.9%{transform:translate(-40px,40px) rotate(49deg)}100.0%{transform:translate(0px,0px) rotate(45deg)}}
+@keyframes flyb3 {0.0%{transform:translate(0px,0px) rotate(51deg)}15.6%{transform:translate(110px,-90px) rotate(62deg)}32.2%{transform:translate(220px,-30px) rotate(62deg)}46.8%{transform:translate(222px,82px) rotate(-62deg)}52.0%{transform:translate(222px,108px) rotate(0deg)}66%{transform:translate(222px,108px) rotate(0deg)}76.9%{transform:translate(150px,90px) rotate(-62deg)}89.1%{transform:translate(50px,20px) rotate(-55deg)}100.0%{transform:translate(0px,0px) rotate(-62deg)}}
+@keyframes flyb4 {0.0%{transform:translate(0px,0px) rotate(-62deg)}13.2%{transform:translate(-130px,-70px) rotate(-62deg)}27.3%{transform:translate(-240px,20px) rotate(62deg)}39.6%{transform:translate(-149px,30px) rotate(-62deg)}44.0%{transform:translate(-149px,56px) rotate(0deg)}62%{transform:translate(-149px,56px) rotate(0deg)}74.2%{transform:translate(-120px,90px) rotate(62deg)}87.8%{transform:translate(-30px,50px) rotate(62deg)}100.0%{transform:translate(0px,0px) rotate(31deg)}}
+@keyframes flyb5 {0.0%{transform:translate(0px,0px) rotate(62deg)}14.4%{transform:translate(150px,-60px) rotate(62deg)}29.8%{transform:translate(280px,30px) rotate(-62deg)}43.2%{transform:translate(212px,34px) rotate(-62deg)}48.0%{transform:translate(212px,60px) rotate(0deg)}64%{transform:translate(212px,60px) rotate(0deg)}75.5%{transform:translate(190px,70px) rotate(-62deg)}88.5%{transform:translate(60px,30px) rotate(-62deg)}100.0%{transform:translate(0px,0px) rotate(-62deg)}}
+@keyframes flyb6 {0.0%{transform:translate(0px,0px) rotate(-62deg)}15.0%{transform:translate(-160px,-80px) rotate(62deg)}31.0%{transform:translate(80px,-150px) rotate(62deg)}45.0%{transform:translate(160px,-60px) rotate(-62deg)}50.0%{transform:translate(160px,-34px) rotate(0deg)}68%{transform:translate(160px,-34px) rotate(0deg)}78.2%{transform:translate(200px,-60px) rotate(57deg)}89.8%{transform:translate(60px,30px) rotate(-62deg)}100.0%{transform:translate(0px,0px) rotate(-62deg)}}
+@keyframes flyb7 {0.0%{transform:translate(0px,0px) rotate(53deg)}12.6%{transform:translate(120px,-90px) rotate(-62deg)}26.0%{transform:translate(-70px,-160px) rotate(62deg)}37.8%{transform:translate(88px,-232px) rotate(-62deg)}42.0%{transform:translate(88px,-206px) rotate(0deg)}58%{transform:translate(88px,-206px) rotate(0deg)}71.4%{transform:translate(-160px,-40px) rotate(-62deg)}86.6%{transform:translate(-40px,30px) rotate(62deg)}100.0%{transform:translate(0px,0px) rotate(53deg)}}
+@keyframes flyb8 {0.0%{transform:translate(0px,0px) rotate(-56deg)}13.8%{transform:translate(-120px,-80px) rotate(-62deg)}28.5%{transform:translate(-260px,-40px) rotate(23deg)}41.4%{transform:translate(-172px,-245px) rotate(-62deg)}46.0%{transform:translate(-172px,-219px) rotate(0deg)}60%{transform:translate(-172px,-219px) rotate(0deg)}72.8%{transform:translate(-170px,40px) rotate(-62deg)}87.2%{transform:translate(-50px,20px) rotate(62deg)}100.0%{transform:translate(0px,0px) rotate(62deg)}}
+
+@media (prefers-reduced-motion: reduce) {
+  .garden-motion { animation: none !important }
+}
+
+/* Card entrance + settled-copy transition for the garden home page */
+@keyframes gardenEnter {
+  from { opacity: 0; transform: translateY(12px) }
+  to   { opacity: 1; transform: none }
+}
+
+.garden-enter {
+  animation: gardenEnter 0.9s cubic-bezier(0.2, 0.7, 0.3, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .garden-enter { animation: none }
+}

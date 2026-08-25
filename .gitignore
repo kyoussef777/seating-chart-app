@@ -41,8 +41,7 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# drizzle
-/drizzle
+# drizzle (migrations are committed; only local journal noise is ignored)
 
 # IDE
 .vscode/

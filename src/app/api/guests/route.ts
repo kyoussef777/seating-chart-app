@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth, getSession } from '@/lib/auth';
+import { authorizeGuestUpdate } from '@/lib/guest-update-policy';
 import { db } from '@/lib/db';
 import { guests, tables, eventSettings } from '@/lib/schema';
 import { eq, ilike } from 'drizzle-orm';
@@ -103,20 +104,13 @@ export async function POST(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
-    const { id, name, phoneNumber, address, tableId, partySize, requiresAuth = true } = await request.json();
+    const { id, name, phoneNumber, address, tableId, partySize } = await request.json();
 
-    // SECURITY: Always require auth for updates, except for guest self-service address updates
-    if (requiresAuth) {
-      await requireAuth();
-    } else {
-      // For guest self-service, only allow address updates (no name, table, party size changes)
-      if (name !== undefined || tableId !== undefined || partySize !== undefined) {
-        return NextResponse.json(
-          { error: 'Unauthorized: Only address updates are allowed without authentication' },
-          { status: 403 }
-        );
-      }
-    }
+    // SECURITY: privilege is derived from the verified session cookie only.
+    // It was previously read from a `requiresAuth` field in the request body,
+    // which let any caller opt out of authentication.
+    const session = await getSession();
+    const isAdmin = session !== null;
 
     if (!id || typeof id !== 'string') {
       return NextResponse.json(
@@ -133,6 +127,23 @@ export async function PUT(request: NextRequest) {
         { error: 'Guest not found' },
         { status: 404 }
       );
+    }
+
+    let addressCollectionEnabled = true;
+    if (!isAdmin) {
+      const [settings] = await db.select().from(eventSettings).limit(1);
+      addressCollectionEnabled = settings ? settings.addressCollectionEnabled : true;
+    }
+
+    const decision = authorizeGuestUpdate({
+      isAdmin,
+      fields: { name, phoneNumber, address, tableId, partySize },
+      addressCollectionEnabled,
+      currentAddress: currentGuest.address,
+    });
+
+    if (!decision.ok) {
+      return NextResponse.json({ error: decision.error }, { status: decision.status });
     }
 
     // If assigning to a table (not unassigning), validate capacity
@@ -216,6 +227,12 @@ export async function PUT(request: NextRequest) {
         { error: 'Guest not found' },
         { status: 404 }
       );
+    }
+
+    // Only admins get the record back; echoing it to an anonymous caller
+    // leaked phoneNumber and address, which GET deliberately withholds.
+    if (decision.scope !== 'admin') {
+      return NextResponse.json({ success: true });
     }
 
     return NextResponse.json({ guest: updatedGuest });

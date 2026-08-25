@@ -4,6 +4,7 @@ import React from 'react';
 import { useDrag } from 'react-dnd';
 import { User, X, Users } from 'lucide-react';
 import { useTheme } from '@/hooks/useTheme';
+import type { GuestDragItem } from '@/lib/seating';
 
 interface Guest {
   id: string;
@@ -26,13 +27,24 @@ function DraggableGuest({
   showUnassign = false
 }: DraggableGuestProps) {
   const themeConfig = useTheme();
-  const [{ isDragging }, drag] = useDrag(() => ({
-    type: 'guest',
-    item: { id: guest.id, type: 'guest' },
-    collect: (monitor) => ({
-      isDragging: monitor.isDragging(),
+  // Carry the origin table + party size so drop targets can check capacity
+  // without looking the guest up in state that may not hold them.
+  const [{ isDragging }, drag] = useDrag(
+    () => ({
+      type: 'guest',
+      item: {
+        id: guest.id,
+        type: 'guest',
+        fromTableId: guest.tableId,
+        partySize: guest.partySize || 1,
+        name: guest.name,
+      } satisfies GuestDragItem,
+      collect: (monitor) => ({
+        isDragging: monitor.isDragging(),
+      }),
     }),
-  }));
+    [guest.id, guest.tableId, guest.partySize, guest.name]
+  );
 
   return (
     <div

@@ -10,20 +10,22 @@ import {
   Users,
   Grid,
   Heart,
-  ShieldCheck
+  ShieldCheck,
+  ClipboardList
 } from 'lucide-react';
 import { useTheme } from '@/hooks/useTheme';
 import SeatingChart from '@/components/admin/SeatingChart';
 import GuestList from '@/components/admin/GuestList';
 import EventSettings from '@/components/admin/EventSettings';
 import UserManagement from '@/components/admin/UserManagement';
+import RosterView from '@/components/admin/RosterView';
 
 interface User {
   id: string;
   username: string;
 }
 
-type Tab = 'seating' | 'guests' | 'settings' | 'users';
+type Tab = 'seating' | 'roster' | 'guests' | 'settings' | 'users';
 
 export default function AdminPage() {
   const themeConfig = useTheme();
@@ -79,6 +81,7 @@ export default function AdminPage() {
 
   const tabs = [
     { id: 'seating' as const, name: 'Seating Chart', icon: Grid },
+    { id: 'roster' as const, name: 'Roster', icon: ClipboardList },
     { id: 'guests' as const, name: 'Guest List', icon: Users },
     { id: 'settings' as const, name: 'Event Settings', icon: Settings },
     { id: 'users' as const, name: 'User Management', icon: ShieldCheck },
@@ -139,6 +142,7 @@ export default function AdminPage() {
 
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {activeTab === 'seating' && <SeatingChart />}
+          {activeTab === 'roster' && <RosterView />}
           {activeTab === 'guests' && <GuestList />}
           {activeTab === 'settings' && <EventSettings />}
           {activeTab === 'users' && <UserManagement />}
