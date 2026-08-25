@@ -325,7 +325,6 @@ export default function HomePage() {
         body: JSON.stringify({
           id: foundGuest.id,
           address: address.trim(),
-          requiresAuth: false,
         }),
       });
 

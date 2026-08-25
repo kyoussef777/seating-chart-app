@@ -128,3 +128,17 @@ export async function persistAssignment(guestId: string, tableId: string | null)
   const data = await res.json().catch(() => ({}));
   return { ok: false as const, error: data.error || 'Unknown error' };
 }
+
+/**
+ * Neutralise spreadsheet formula injection.
+ *
+ * Excel/Sheets treat a leading =, +, -, @ (or tab/CR) as a formula, so an
+ * attacker-supplied value such as `=HYPERLINK(...)` or a DDE payload executes
+ * when the organiser opens an exported workbook. Prefixing with an apostrophe
+ * forces the cell to be read as text.
+ */
+export function safeCell(value: unknown): string | number {
+  if (typeof value === 'number') return value;
+  const text = value === null || value === undefined ? '' : String(value);
+  return /^[=+\-@\t\r]/.test(text) ? `'${text}` : text;
+}

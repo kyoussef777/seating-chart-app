@@ -7,6 +7,7 @@ import {
   clampToCanvas,
   groupGuests,
   seatsAvailable,
+  safeCell,
   seatsUsed,
   type Guest,
   type GuestDragItem,
@@ -91,4 +92,15 @@ test('groupGuests splits seated from unassigned', () => {
   assert.equal(tables[0].guests.length, 2);
   assert.equal(tables[1].guests.length, 0);
   assert.deepEqual(unassigned.map((g) => g.id), ['b']);
+});
+
+test('safeCell neutralises spreadsheet formula injection', () => {
+  assert.equal(safeCell('=HYPERLINK("http://evil","x")'), "'=HYPERLINK(\"http://evil\",\"x\")");
+  assert.equal(safeCell('+1+1'), "'+1+1");
+  assert.equal(safeCell('-2'), "'-2");
+  assert.equal(safeCell('@SUM(A1)'), "'@SUM(A1)");
+  // Ordinary values pass through untouched.
+  assert.equal(safeCell('12 Main St'), '12 Main St');
+  assert.equal(safeCell(null), '');
+  assert.equal(safeCell(4), 4);
 });

@@ -9,6 +9,7 @@ import {
   fetchSeating,
   getTableDimensions,
   persistAssignment,
+  safeCell,
   seatsAvailable,
 } from '@/lib/seating';
 import {
@@ -307,8 +308,8 @@ export default function SeatingChart() {
         if (table.guests.length === 0) {
           // Empty table - show one row
           excelData.push([
-            table.name,
-            table.shape,
+            safeCell(table.name),
+            safeCell(table.shape),
             table.capacity,
             0,
             '(No guests assigned)',
@@ -322,14 +323,14 @@ export default function SeatingChart() {
 
           sortedGuests.forEach((guest, index) => {
             excelData.push([
-              index === 0 ? table.name : '', // Only show table info on first guest row
-              index === 0 ? table.shape : '',
+              index === 0 ? safeCell(table.name) : '', // Only show table info on first guest row
+              index === 0 ? safeCell(table.shape) : '',
               index === 0 ? table.capacity : '',
               index === 0 ? seatsUsed : '',
-              guest.name,
+              safeCell(guest.name),
               guest.partySize || 1,
-              guest.phoneNumber || '',
-              guest.address || ''
+              safeCell(guest.phoneNumber),
+              safeCell(guest.address)
             ]);
           });
         }
@@ -347,10 +348,10 @@ export default function SeatingChart() {
             '',
             '',
             '',
-            guest.name,
+            safeCell(guest.name),
             guest.partySize || 1,
-            guest.phoneNumber || '',
-            guest.address || ''
+            safeCell(guest.phoneNumber),
+            safeCell(guest.address)
           ]);
         });
       }
