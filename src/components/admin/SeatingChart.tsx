@@ -134,6 +134,8 @@ export default function SeatingChart() {
   const [shapes, setShapes] = useState<Shape[]>([]);
   const [referenceObjects, setReferenceObjects] = useState<ReferenceObject[]>([]);
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
+  // Layout objects live in local state until 'Save Layout'; track unsaved edits.
+  const [layoutDirty, setLayoutDirty] = useState(false);
   const [showMiniMap, setShowMiniMap] = useState(true);
   const [draggedItem, setDraggedItem] = useState<{ type: 'label' | 'shape' | 'ref'; id: string } | null>(null);
   const [resizingItem, setResizingItem] = useState<{ type: 'shape' | 'ref'; id: string; handle: string } | null>(null);
@@ -157,6 +159,7 @@ export default function SeatingChart() {
   const [zoomLevel, setZoomLevel] = useState(0.7);
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
   const [isPanning, setIsPanning] = useState(false);
+  const [panMoved, setPanMoved] = useState(false);
   const [lastPanPoint, setLastPanPoint] = useState({ x: 0, y: 0 });
   const chartRef = useRef<HTMLDivElement>(null);
 
@@ -263,8 +266,9 @@ export default function SeatingChart() {
       };
       localStorage.setItem('seatingChartPreferences', JSON.stringify(prefs));
 
-      // Save layout objects to database
-      await Promise.all([
+      // Save layout objects to database. Responses are checked: previously a
+      // 401 or 500 still reported "saved", so a failed save looked successful.
+      const responses = await Promise.all([
         fetch('/api/layout/labels', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -282,7 +286,18 @@ export default function SeatingChart() {
         }),
       ]);
 
-      toast.success('Layout saved to database');
+      const failed = responses.find((r) => !r.ok);
+      if (failed) {
+        toast.error(
+          failed.status === 401
+            ? 'Your session expired — sign in again to save the layout.'
+            : 'Failed to save layout. Your changes are still here; try again.'
+        );
+        return;
+      }
+
+      setLayoutDirty(false);
+      toast.success('Layout saved');
     } catch (error) {
       console.error('Failed to save layout:', error);
       toast.error('Failed to save layout');
@@ -446,17 +461,32 @@ export default function SeatingChart() {
   const handleDeleteSelected = useCallback(() => {
     if (selectedItems.size === 0) return;
 
-    selectedItems.forEach((id) => {
-      if (id.startsWith('label-')) {
-        setLabels((prev) => prev.filter((l) => l.id !== id));
-      } else if (id.startsWith('shape-')) {
-        setShapes((prev) => prev.filter((s) => s.id !== id));
-      } else if (id.startsWith('ref-')) {
-        setReferenceObjects((prev) => prev.filter((r) => r.id !== id));
-      }
+    // Match against the actual collections. This used to test id prefixes
+    // ('label-', 'shape-', 'ref-'), which only newly created items have —
+    // anything loaded from the database has a UUID, so Delete silently did
+    // nothing while still reporting success.
+    let removed = 0;
+    setLabels((prev) => {
+      const next = prev.filter((l) => !selectedItems.has(l.id));
+      removed += prev.length - next.length;
+      return next;
     });
+    setShapes((prev) => {
+      const next = prev.filter((sh) => !selectedItems.has(sh.id));
+      removed += prev.length - next.length;
+      return next;
+    });
+    setReferenceObjects((prev) => {
+      const next = prev.filter((r) => !selectedItems.has(r.id));
+      removed += prev.length - next.length;
+      return next;
+    });
+
     setSelectedItems(new Set());
-    toast.success('Deleted selected items');
+    if (removed > 0) {
+      setLayoutDirty(true);
+      toast.success(`Deleted ${removed} item${removed === 1 ? '' : 's'}`);
+    }
   }, [selectedItems, toast]);
 
   // Keyboard shortcuts
@@ -612,14 +642,42 @@ export default function SeatingChart() {
     }
   };
 
-  // Zoom functions
-  const handleZoomIn = () => {
-    setZoomLevel((prev) => Math.min(prev + 0.1, 2));
-  };
+  // Visible slice of the floor plan, as percentages, for the mini-map.
+  const [viewport, setViewport] = useState<{ left: number; top: number; width: number; height: number } | null>(null);
+  useEffect(() => {
+    const rect = chartRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const clampPct = (v: number) => Math.max(0, Math.min(100, v));
+    const left = clampPct((-panOffset.x / zoomLevel / CANVAS_WIDTH) * 100);
+    const top = clampPct((-panOffset.y / zoomLevel / CANVAS_HEIGHT) * 100);
+    setViewport({
+      left,
+      top,
+      width: clampPct((rect.width / zoomLevel / CANVAS_WIDTH) * 100 + left) - left,
+      height: clampPct((rect.height / zoomLevel / CANVAS_HEIGHT) * 100 + top) - top,
+    });
+  }, [panOffset, zoomLevel, showMiniMap]);
 
-  const handleZoomOut = () => {
-    setZoomLevel((prev) => Math.max(prev - 0.1, 0.3));
-  };
+  // Zoom about the centre of the viewport. Zooming by changing scale alone
+  // (transform-origin is 0 0) slid the floor plan out from under the cursor.
+  const zoomAboutCentre = useCallback((next: number) => {
+    const rect = chartRef.current?.getBoundingClientRect();
+    setZoomLevel((prev) => {
+      const target = Math.max(0.3, Math.min(2, next));
+      if (rect) {
+        const cx = rect.width / 2;
+        const cy = rect.height / 2;
+        setPanOffset((pan) => ({
+          x: cx - ((cx - pan.x) / prev) * target,
+          y: cy - ((cy - pan.y) / prev) * target,
+        }));
+      }
+      return target;
+    });
+  }, []);
+
+  const handleZoomIn = () => zoomAboutCentre(zoomLevel + 0.1);
+  const handleZoomOut = () => zoomAboutCentre(zoomLevel - 0.1);
 
   const handleResetZoom = () => {
     setZoomLevel(0.7);
@@ -628,9 +686,13 @@ export default function SeatingChart() {
 
   // Pan functions
   const handleMouseDown = (e: React.MouseEvent) => {
-    if (e.button === 1 || (e.button === 0 && e.ctrlKey)) {
+    // Middle-click, ctrl+drag, or a plain drag on empty canvas all pan. Ctrl+click
+    // opens the context menu on macOS, so it cannot be the only way to pan.
+    const onEmptyCanvas = e.target === e.currentTarget || e.target === canvasRef.current;
+    if (e.button === 1 || (e.button === 0 && (e.ctrlKey || onEmptyCanvas))) {
       e.preventDefault();
       setIsPanning(true);
+      setPanMoved(false);
       setLastPanPoint({ x: e.clientX, y: e.clientY });
     }
   };
@@ -639,6 +701,7 @@ export default function SeatingChart() {
     if (isPanning) {
       const deltaX = e.clientX - lastPanPoint.x;
       const deltaY = e.clientY - lastPanPoint.y;
+      if (Math.abs(deltaX) > 2 || Math.abs(deltaY) > 2) setPanMoved(true);
 
       setPanOffset((prev) => ({
         x: prev.x + deltaX,
@@ -653,14 +716,19 @@ export default function SeatingChart() {
       const deltaX = e.clientX - lastMousePos.x;
       const deltaY = e.clientY - lastMousePos.y;
 
+      // Clamp into the floor plan: items dragged past the edge used to end up
+      // outside the canvas, where overflow:hidden made them unreachable.
+      const clampX = (v: number, w: number) => Math.min(Math.max(0, v), CANVAS_WIDTH - w);
+      const clampY = (v: number, h: number) => Math.min(Math.max(0, v), CANVAS_HEIGHT - h);
+
       if (draggedItem.type === 'label') {
         setLabels((prev) =>
           prev.map((label) =>
             label.id === draggedItem.id
               ? {
                   ...label,
-                  x: snapPosition(label.x + deltaX / zoomLevel),
-                  y: snapPosition(label.y + deltaY / zoomLevel),
+                  x: clampX(snapPosition(label.x + deltaX / zoomLevel), 0),
+                  y: clampY(snapPosition(label.y + deltaY / zoomLevel), 0),
                 }
               : label
           )
@@ -671,8 +739,8 @@ export default function SeatingChart() {
             shape.id === draggedItem.id
               ? {
                   ...shape,
-                  x: snapPosition(shape.x + deltaX / zoomLevel),
-                  y: snapPosition(shape.y + deltaY / zoomLevel),
+                  x: clampX(snapPosition(shape.x + deltaX / zoomLevel), shape.width),
+                  y: clampY(snapPosition(shape.y + deltaY / zoomLevel), shape.height),
                 }
               : shape
           )
@@ -683,13 +751,14 @@ export default function SeatingChart() {
             ref.id === draggedItem.id
               ? {
                   ...ref,
-                  x: snapPosition(ref.x + deltaX / zoomLevel),
-                  y: snapPosition(ref.y + deltaY / zoomLevel),
+                  x: clampX(snapPosition(ref.x + deltaX / zoomLevel), ref.width),
+                  y: clampY(snapPosition(ref.y + deltaY / zoomLevel), ref.height),
                 }
               : ref
           )
         );
       }
+      setLayoutDirty(true);
 
       setLastMousePos({ x: e.clientX, y: e.clientY });
     }
@@ -710,15 +779,16 @@ export default function SeatingChart() {
               if (resizingItem.handle.includes('s')) {
                 newShape.height = Math.max(50, shape.height + deltaY / zoomLevel);
               }
+              // Derive the edge movement from the *clamped* size. Using the raw
+              // delta kept sliding x/y after the minimum was reached, so a shape
+              // resized past its limit crept across the canvas.
               if (resizingItem.handle.includes('w')) {
-                const widthChange = -deltaX / zoomLevel;
-                newShape.width = Math.max(50, shape.width + widthChange);
-                newShape.x = shape.x - widthChange;
+                newShape.width = Math.max(50, shape.width - deltaX / zoomLevel);
+                newShape.x = shape.x + (shape.width - newShape.width);
               }
               if (resizingItem.handle.includes('n')) {
-                const heightChange = -deltaY / zoomLevel;
-                newShape.height = Math.max(50, shape.height + heightChange);
-                newShape.y = shape.y - heightChange;
+                newShape.height = Math.max(50, shape.height - deltaY / zoomLevel);
+                newShape.y = shape.y + (shape.height - newShape.height);
               }
               return newShape;
             }
@@ -737,14 +807,12 @@ export default function SeatingChart() {
                 newRef.height = Math.max(40, ref.height + deltaY / zoomLevel);
               }
               if (resizingItem.handle.includes('w')) {
-                const widthChange = -deltaX / zoomLevel;
-                newRef.width = Math.max(40, ref.width + widthChange);
-                newRef.x = ref.x - widthChange;
+                newRef.width = Math.max(40, ref.width - deltaX / zoomLevel);
+                newRef.x = ref.x + (ref.width - newRef.width);
               }
               if (resizingItem.handle.includes('n')) {
-                const heightChange = -deltaY / zoomLevel;
-                newRef.height = Math.max(40, ref.height + heightChange);
-                newRef.y = ref.y - heightChange;
+                newRef.height = Math.max(40, ref.height - deltaY / zoomLevel);
+                newRef.y = ref.y + (ref.height - newRef.height);
               }
               return newRef;
             }
@@ -753,6 +821,7 @@ export default function SeatingChart() {
         );
       }
 
+      setLayoutDirty(true);
       setLastMousePos({ x: e.clientX, y: e.clientY });
     }
 
@@ -804,13 +873,16 @@ export default function SeatingChart() {
   };
 
   const handleMouseUp = () => {
+    // A click on empty canvas that did not turn into a pan clears the selection.
+    if (isPanning && !panMoved && selectedItems.size > 0) setSelectedItems(new Set());
     setIsPanning(false);
+    setPanMoved(false);
     setDraggedItem(null);
     setResizingItem(null);
     setRotatingItem(null);
   };
 
-  const handleWheel = (e: React.WheelEvent) => {
+  const handleWheel = useCallback((e: WheelEvent) => {
     // Ctrl+Wheel or pinch gesture (ctrlKey is set on trackpad pinch) = zoom
     if (e.ctrlKey || e.metaKey) {
       e.preventDefault();
@@ -852,7 +924,18 @@ export default function SeatingChart() {
         y: panOffset.y - e.deltaY,
       });
     }
-  };
+  }, [panOffset, zoomLevel]);
+
+  // React registers onWheel as a passive listener, so preventDefault() inside
+  // it is ignored: ctrl+wheel zoomed the browser and plain wheel scrolled the
+  // page instead of panning the chart. Bind it natively as non-passive.
+  useEffect(() => {
+    const el = chartRef.current;
+    if (!el) return;
+    const onWheel = (e: WheelEvent) => handleWheel(e);
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => el.removeEventListener('wheel', onWheel);
+  }, [handleWheel]);
 
   const handleDeleteTable = async (tableId: string) => {
     if (!confirm('Are you sure you want to delete this table? Guests will be unassigned.')) {
@@ -1069,6 +1152,7 @@ export default function SeatingChart() {
     };
 
     setLabels((prev) => [...prev, newLabel]);
+    setLayoutDirty(true);
     toast.success('Label added - click to edit text');
   };
 
@@ -1113,6 +1197,7 @@ export default function SeatingChart() {
     };
 
     setShapes((prev) => [...prev, newShape]);
+    setLayoutDirty(true);
     toast.success(`${type} added`);
   };
 
@@ -1157,6 +1242,7 @@ export default function SeatingChart() {
     };
 
     setReferenceObjects((prev) => [...prev, newRefObject]);
+    setLayoutDirty(true);
     toast.success(`${config.label} added`);
   };
 
@@ -1180,51 +1266,63 @@ export default function SeatingChart() {
     }
   };
 
-  // Alignment functions
-  const handleAlignLeft = () => {
-    const selectedTables = tables.filter((t) => selectedItems.has(t.id));
-    if (selectedTables.length < 2) return;
-
-    const minX = Math.min(...selectedTables.map((t) => t.positionX));
-    selectedTables.forEach((table) => {
-      handleSetTablePosition(table.id, minX, table.positionY);
+  /** Click a table to select it, shift-click to add to the selection. Tables
+   *  were never selectable, which left every align/distribute button dead. */
+  const handleSelectTable = useCallback((tableId: string, additive: boolean) => {
+    setSelectedItems((prev) => {
+      if (!additive) return new Set([tableId]);
+      const next = new Set(prev);
+      if (next.has(tableId)) next.delete(tableId);
+      else next.add(tableId);
+      return next;
     });
+  }, []);
+
+  const selectedTables = tables.filter((t) => selectedItems.has(t.id));
+
+  /** Shared guard so the buttons explain themselves instead of doing nothing. */
+  const withSelection = (min: number, action: (sel: Table[]) => void) => () => {
+    if (selectedTables.length < min) {
+      toast.error(`Select at least ${min} tables first (click a table, shift-click to add).`);
+      return;
+    }
+    action([...selectedTables]);
   };
 
-  const handleAlignCenter = () => {
-    const selectedTables = tables.filter((t) => selectedItems.has(t.id));
-    if (selectedTables.length < 2) return;
+  const handleAlignLeft = withSelection(2, (sel) => {
+    const minX = Math.min(...sel.map((t) => t.positionX));
+    sel.forEach((t) => handleSetTablePosition(t.id, minX, t.positionY));
+  });
 
-    const avgX =
-      selectedTables.reduce((sum, t) => sum + t.positionX, 0) / selectedTables.length;
-    selectedTables.forEach((table) => {
-      handleSetTablePosition(table.id, snapPosition(avgX), table.positionY);
-    });
-  };
+  const handleAlignCenter = withSelection(2, (sel) => {
+    // Align centres, not left edges, so tables of different widths line up.
+    const avgCentre =
+      sel.reduce((sum, t) => sum + t.positionX + getTableDimensions(t.shape).width / 2, 0) / sel.length;
+    sel.forEach((t) =>
+      handleSetTablePosition(
+        t.id,
+        snapPosition(avgCentre - getTableDimensions(t.shape).width / 2),
+        t.positionY
+      )
+    );
+  });
 
-  const handleAlignRight = () => {
-    const selectedTables = tables.filter((t) => selectedItems.has(t.id));
-    if (selectedTables.length < 2) return;
+  const handleAlignRight = withSelection(2, (sel) => {
+    // Align right edges. This used to align positionX (the left edge), which
+    // is the same as align-left for equal widths and wrong for mixed shapes.
+    const maxRight = Math.max(...sel.map((t) => t.positionX + getTableDimensions(t.shape).width));
+    sel.forEach((t) =>
+      handleSetTablePosition(t.id, maxRight - getTableDimensions(t.shape).width, t.positionY)
+    );
+  });
 
-    const maxX = Math.max(...selectedTables.map((t) => t.positionX));
-    selectedTables.forEach((table) => {
-      handleSetTablePosition(table.id, maxX, table.positionY);
-    });
-  };
-
-  const handleDistributeVertically = () => {
-    const selectedTables = tables.filter((t) => selectedItems.has(t.id));
-    if (selectedTables.length < 3) return;
-
-    selectedTables.sort((a, b) => a.positionY - b.positionY);
-    const minY = selectedTables[0].positionY;
-    const maxY = selectedTables[selectedTables.length - 1].positionY;
-    const spacing = (maxY - minY) / (selectedTables.length - 1);
-
-    selectedTables.forEach((table, index) => {
-      handleSetTablePosition(table.id, table.positionX, snapPosition(minY + spacing * index));
-    });
-  };
+  const handleDistributeVertically = withSelection(3, (sel) => {
+    sel.sort((a, b) => a.positionY - b.positionY);
+    const minY = sel[0].positionY;
+    const maxY = sel[sel.length - 1].positionY;
+    const spacing = (maxY - minY) / (sel.length - 1);
+    sel.forEach((t, i) => handleSetTablePosition(t.id, t.positionX, snapPosition(minY + spacing * i)));
+  });
 
   if (loading) {
     return (
@@ -1244,11 +1342,13 @@ export default function SeatingChart() {
         <div className="flex gap-2">
           <button
             onClick={savePreferences}
-            className={`inline-flex items-center gap-2 ${themeConfig.button.secondary}`}
-            title="Save layout"
+            className={`inline-flex items-center gap-2 ${themeConfig.button.secondary} ${
+              layoutDirty ? 'ring-2 ring-amber-400' : ''
+            }`}
+            title={layoutDirty ? 'You have unsaved layout changes' : 'Save layout'}
           >
             <Save className="w-4 h-4" />
-            Save Layout
+            {layoutDirty ? 'Save Layout •' : 'Save Layout'}
           </button>
           <button
             onClick={exportToExcel}
@@ -1358,7 +1458,7 @@ export default function SeatingChart() {
               </button>
               <div className={`flex items-center gap-1 text-sm ml-4 ${themeConfig.text.body}`}>
                 <Move className="w-4 h-4" />
-                <span>Ctrl+scroll zoom, middle-click pan</span>
+                <span>Drag empty space to pan · Ctrl+scroll to zoom · click a table to select</span>
               </div>
             </div>
 
@@ -1530,7 +1630,6 @@ export default function SeatingChart() {
             onMouseDown={handleMouseDown}
             onMouseMove={handleMouseMove}
             onMouseUp={handleMouseUp}
-            onWheel={handleWheel}
             onMouseLeave={handleMouseUp}
           >
             <div
@@ -1570,7 +1669,7 @@ export default function SeatingChart() {
                 <div
                   key={shape.id}
                   onMouseDown={(e) => handleShapeMouseDown(shape.id, e)}
-                  className={`absolute cursor-move transition-shadow ${selectedItems.has(shape.id) ? 'ring-4 ring-emerald-500' : ''}`}
+                  className={`absolute cursor-move transition-shadow ${selectedItems.has(shape.id) ? 'ring-4 ring-amber-500' : ''}`}
                   style={{
                     left: shape.x,
                     top: shape.y,
@@ -1649,7 +1748,7 @@ export default function SeatingChart() {
                   <div
                     key={ref.id}
                     onMouseDown={(e) => handleRefObjectMouseDown(ref.id, e)}
-                    className={`absolute cursor-move border-2 border-dashed rounded-lg flex flex-col items-center justify-center font-semibold text-xs transition-shadow ${config.color} ${selectedItems.has(ref.id) ? 'ring-4 ring-emerald-500' : ''}`}
+                    className={`absolute cursor-move border-2 border-dashed rounded-lg flex flex-col items-center justify-center font-semibold text-xs transition-shadow ${config.color} ${selectedItems.has(ref.id) ? 'ring-4 ring-amber-500' : ''}`}
                     style={{
                       left: ref.x,
                       top: ref.y,
@@ -1720,7 +1819,7 @@ export default function SeatingChart() {
                 <div
                   key={label.id}
                   onMouseDown={(e) => handleLabelMouseDown(label.id, e)}
-                  className={`absolute cursor-move font-bold transition-shadow ${themeConfig.text.heading} ${selectedItems.has(label.id) ? 'ring-4 ring-emerald-500 bg-white bg-opacity-80 rounded-lg px-3 py-1' : 'bg-white bg-opacity-60 rounded px-2'}`}
+                  className={`absolute cursor-move font-bold transition-shadow ${themeConfig.text.heading} ${selectedItems.has(label.id) ? 'ring-4 ring-amber-500 bg-white bg-opacity-80 rounded-lg px-3 py-1' : 'bg-white bg-opacity-60 rounded px-2'}`}
                   style={{
                     left: label.x,
                     top: label.y,
@@ -1784,6 +1883,8 @@ export default function SeatingChart() {
                 <DraggableTable
                   key={table.id}
                   table={table}
+                  isSelected={selectedItems.has(table.id)}
+                  onSelect={handleSelectTable}
                   onDelete={() => handleDeleteTable(table.id)}
                   onAssignGuest={handleAssignGuest}
                   onUnassignGuest={handleUnassignGuest}
@@ -1811,23 +1912,39 @@ export default function SeatingChart() {
 
             {/* Mini-map */}
             {showMiniMap && tables.length > 0 && (
-              <div className="absolute bottom-4 right-4 w-48 h-36 bg-white border-2 border-stone-400 rounded-lg shadow-lg overflow-hidden pointer-events-none">
+              <div className="absolute bottom-4 right-4 w-48 h-36 bg-white/95 border-2 border-stone-400 rounded-lg shadow-lg overflow-hidden pointer-events-none">
                 <div className="relative w-full h-full bg-stone-100">
-                  <div className="absolute inset-0 flex items-center justify-center text-xs text-stone-800 font-semibold">
-                    Mini-map
-                  </div>
-                  {tables.map((table) => (
+                  {/* Positions are a fraction of the real floor plan. These were
+                      hardcoded to 1200x1000 while the canvas is 2000x1500, so
+                      every table plotted in the wrong place and far ones fell
+                      outside the mini-map entirely. */}
+                  {tables.map((table) => {
+                    const dims = getTableDimensions(table.shape);
+                    return (
+                      <div
+                        key={table.id}
+                        className="absolute bg-emerald-600 rounded-sm opacity-80"
+                        style={{
+                          left: `${(table.positionX / CANVAS_WIDTH) * 100}%`,
+                          top: `${(table.positionY / CANVAS_HEIGHT) * 100}%`,
+                          width: `${Math.max(3, (dims.width / CANVAS_WIDTH) * 100)}%`,
+                          height: `${Math.max(4, (dims.height / CANVAS_HEIGHT) * 100)}%`,
+                        }}
+                      />
+                    );
+                  })}
+                  {/* What you are currently looking at */}
+                  {viewport && (
                     <div
-                      key={table.id}
-                      className="absolute bg-emerald-600 rounded-sm opacity-70"
+                      className="absolute border-2 border-amber-500 bg-amber-400/10"
                       style={{
-                        left: `${(table.positionX / 1200) * 100}%`,
-                        top: `${(table.positionY / 1000) * 100}%`,
-                        width: '10px',
-                        height: '10px',
+                        left: `${viewport.left}%`,
+                        top: `${viewport.top}%`,
+                        width: `${viewport.width}%`,
+                        height: `${viewport.height}%`,
                       }}
                     />
-                  ))}
+                  )}
                 </div>
               </div>
             )}
@@ -1836,7 +1953,9 @@ export default function SeatingChart() {
           {/* Helper Text */}
           <div className="mt-3 text-xs text-stone-800 space-y-1">
             <p>• <strong>Keyboard shortcuts:</strong> G (grid), S (snap), M (mini-map), Delete (remove selected), Esc (deselect)</p>
-            <p>• <strong>Selection:</strong> Click items to select, Shift+Click for multi-select</p>
+            <p>• <strong>Selection:</strong> Click any table, label, shape or object; Shift+Click to add. Click empty space to clear.</p>
+            <p>• <strong>Align:</strong> Select 2+ tables to align them, 3+ to distribute vertically</p>
+            <p>• <strong>Pan/zoom:</strong> Drag empty space (or middle-click) to pan, Ctrl+scroll to zoom</p>
             <p>• <strong>Drag:</strong> Click and drag labels, shapes, and objects to reposition them</p>
             <p>• <strong>Resize:</strong> Drag corner handles on selected shapes/objects to resize</p>
             <p>• <strong>Rotate:</strong> Click blue rotate button on selected items to rotate</p>

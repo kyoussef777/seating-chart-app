@@ -37,6 +37,8 @@ interface Table {
 
 interface DraggableTableProps {
   table: Table;
+  isSelected?: boolean;
+  onSelect?: (tableId: string, additive: boolean) => void;
   onDelete: () => void;
   onAssignGuest: (guestId: string, tableId: string) => void;
   onUnassignGuest: (guestId: string) => void;
@@ -47,6 +49,8 @@ interface DraggableTableProps {
 
 function DraggableTable({
   table,
+  isSelected = false,
+  onSelect,
   onDelete,
   onAssignGuest,
   onUnassignGuest,
@@ -205,11 +209,18 @@ function DraggableTable({
   return (
     <div
       ref={attachRef}
+      onMouseDown={(e) => {
+        // Select without stealing the drag: react-dnd starts on drag, not click.
+        onSelect?.(table.id, e.shiftKey);
+      }}
       className={cn(
         themeConfig.table.default,
         'p-3 relative transition-all duration-200 flex flex-col items-center justify-center',
         isOver && canDropHere ? themeConfig.table.dropTarget : '',
         isOver && !canDropHere ? themeConfig.table.full : '',
+        // Amber, not emerald: the table's own border is emerald, so an emerald
+        // ring was invisible against it.
+        isSelected ? 'ring-4 ring-amber-500 ring-offset-2' : '',
         isDragging ? themeConfig.table.dragging : 'z-0'
       )}
       style={{
@@ -393,6 +404,14 @@ function DraggableTable({
 }
 
 export default React.memo(DraggableTable, (prevProps, nextProps) => {
+  // Selection must be part of the comparison: without it, clicking a table
+  // updated state but never re-rendered, so the ring only appeared once some
+  // unrelated change (a move, a rename) happened to force a render.
+  if (prevProps.isSelected !== nextProps.isSelected) return false;
+
+  // A rename elsewhere changes the duplicate-name list this table validates against.
+  if (prevProps.allTableNames.join('\u0000') !== nextProps.allTableNames.join('\u0000')) return false;
+
   // Only re-render if table data or guests actually changed
   const tableChanged =
     prevProps.table.id !== nextProps.table.id ||
@@ -408,7 +427,12 @@ export default React.memo(DraggableTable, (prevProps, nextProps) => {
     prevProps.table.guests.length !== nextProps.table.guests.length ||
     prevProps.table.guests.some((guest, index) => {
       const nextGuest = nextProps.table.guests[index];
-      return !nextGuest || guest.id !== nextGuest.id || guest.partySize !== nextGuest.partySize;
+      return (
+        !nextGuest ||
+        guest.id !== nextGuest.id ||
+        guest.name !== nextGuest.name ||
+        guest.partySize !== nextGuest.partySize
+      );
     });
 
   // Return true if nothing changed (skip re-render)
