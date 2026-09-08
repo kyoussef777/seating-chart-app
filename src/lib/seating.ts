@@ -113,7 +113,7 @@ export async function fetchSeating() {
   const [tablesRes, guestsRes] = await Promise.all([fetch('/api/tables'), fetch('/api/guests')]);
   const [tablesData, guestsData] = await Promise.all([tablesRes.json(), guestsRes.json()]);
   if (!tablesRes.ok || !guestsRes.ok) throw new Error('Failed to load seating data');
-  return groupGuests(tablesData.tables, guestsData.guests);
+  return groupGuests(tablesData.tables ?? [], guestsData.guests ?? []);
 }
 
 /** Move a guest to a table, or to null to unassign. Server re-validates

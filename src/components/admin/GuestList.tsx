@@ -81,7 +81,7 @@ export default function GuestList() {
       const response = await fetch('/api/guests');
       const data = await response.json();
       if (response.ok) {
-        setGuests(data.guests);
+        setGuests(data.guests ?? []);
       }
     } catch (error) {
       console.error('Failed to fetch guests:', error);
@@ -95,7 +95,7 @@ export default function GuestList() {
       const response = await fetch('/api/tables');
       const data = await response.json();
       if (response.ok) {
-        setTables(data.tables);
+        setTables(data.tables ?? []);
       }
     } catch (error) {
       console.error('Failed to fetch tables:', error);
@@ -196,7 +196,7 @@ export default function GuestList() {
 
       const data = await response.json();
       if (response.ok) {
-        setGuests(prev => [...prev, ...data.guests]);
+        setGuests(prev => [...prev, ...(data.guests ?? [])]);
         setShowImport(false);
         if (fileInputRef.current) {
           fileInputRef.current.value = '';
