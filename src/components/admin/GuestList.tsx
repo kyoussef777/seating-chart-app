@@ -307,19 +307,22 @@ export default function GuestList() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className={`text-2xl ${themeConfig.text.heading}`}>Guest Management</h2>
-        <div className="flex gap-2">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        {/* The sticky header already names the active tab on phones. */}
+        <h2 className={`hidden md:block text-xl sm:text-2xl ${themeConfig.text.heading}`}>Guest Management</h2>
+        {/* Actions sit side by side and stretch on phones so both stay
+            comfortably tappable. */}
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:gap-2">
           <button
             onClick={() => setShowImport(true)}
-            className={`inline-flex items-center gap-2 ${themeConfig.button.secondary}`}
+            className={`inline-flex items-center justify-center gap-2 ${themeConfig.button.secondary}`}
           >
             <Upload className="w-4 h-4" />
             Import CSV
           </button>
           <button
             onClick={() => setShowAddGuest(true)}
-            className={`inline-flex items-center gap-2 ${themeConfig.button.primary}`}
+            className={`inline-flex items-center justify-center gap-2 ${themeConfig.button.primary}`}
           >
             <Plus className="w-4 h-4" />
             Add Guest
@@ -343,127 +346,155 @@ export default function GuestList() {
 
       {/* Bulk Actions Bar */}
       {selectedGuests.size > 0 && (
-        <div className={`${themeConfig.card} bg-emerald-50`}>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <span className={`font-medium ${themeConfig.text.body}`}>
-                {selectedGuests.size} guest(s) selected ({getTotalPeople(guests.filter(g => selectedGuests.has(g.id)))}{' '}
-                people)
-              </span>
+        <div className={`${themeConfig.card} bg-emerald-50 space-y-3 sm:flex sm:items-center sm:justify-between sm:gap-4 sm:space-y-0`}>
+          <div className="flex items-center justify-between gap-3 sm:gap-4">
+            <span className={`text-sm font-medium sm:text-base ${themeConfig.text.body}`}>
+              {selectedGuests.size} selected ({getTotalPeople(guests.filter(g => selectedGuests.has(g.id)))}{' '}
+              people)
+            </span>
+            <button
+              onClick={() => setSelectedGuests(new Set())}
+              className={`${themeConfig.button.tertiary} whitespace-nowrap text-sm`}
+            >
+              Clear
+            </button>
+          </div>
+          <div className="grid grid-cols-2 gap-2 sm:flex sm:gap-2">
+            <div className="relative bulk-actions-dropdown">
               <button
-                onClick={() => setSelectedGuests(new Set())}
-                className={themeConfig.button.tertiary}
+                onClick={() => setShowBulkActions(!showBulkActions)}
+                className={`${themeConfig.button.secondary} w-full whitespace-nowrap`}
               >
-                Clear Selection
+                Assign to Table
               </button>
-            </div>
-            <div className="flex gap-2">
-              <div className="relative bulk-actions-dropdown">
-                <button
-                  onClick={() => setShowBulkActions(!showBulkActions)}
-                  className={themeConfig.button.secondary}
-                >
-                  Assign to Table
-                </button>
-                {showBulkActions && (
-                  <div className={`absolute right-0 mt-2 w-48 ${themeConfig.classes.bgCard} ${themeConfig.classes.borderDefault} rounded-lg shadow-lg z-10 max-h-64 overflow-y-auto`}>
-                    <div className="py-1">
+              {showBulkActions && (
+                <div className={`absolute left-0 right-0 mt-2 sm:left-auto sm:right-0 sm:w-48 ${themeConfig.classes.bgCard} ${themeConfig.classes.borderDefault} rounded-lg shadow-lg z-20 max-h-64 overflow-y-auto`}>
+                  <div className="py-1">
+                    <button
+                      onClick={() => handleBulkAssign('')}
+                      className={`w-full text-left px-4 py-3 sm:py-2 ${themeConfig.text.body} hover:bg-stone-50`}
+                    >
+                      Unassign
+                    </button>
+                    {tables.map(table => (
                       <button
-                        onClick={() => handleBulkAssign('')}
-                        className={`w-full text-left px-4 py-2 ${themeConfig.text.body} hover:bg-stone-50`}
+                        key={table.id}
+                        onClick={() => handleBulkAssign(table.id)}
+                        className={`w-full text-left px-4 py-3 sm:py-2 ${themeConfig.text.body} hover:bg-stone-50`}
                       >
-                        Unassign
+                        {table.name}
                       </button>
-                      {tables.map(table => (
-                        <button
-                          key={table.id}
-                          onClick={() => handleBulkAssign(table.id)}
-                          className={`w-full text-left px-4 py-2 ${themeConfig.text.body} hover:bg-stone-50`}
-                        >
-                          {table.name}
-                        </button>
-                      ))}
-                    </div>
+                    ))}
                   </div>
-                )}
-              </div>
-              <button
-                onClick={handleBulkDelete}
-                className={themeConfig.button.danger}
-              >
-                <Trash2 className="w-4 h-4" />
-                Delete Selected
-              </button>
+                </div>
+              )}
             </div>
+            <button
+              onClick={handleBulkDelete}
+              className={`${themeConfig.button.danger} inline-flex items-center justify-center gap-2 whitespace-nowrap`}
+            >
+              <Trash2 className="w-4 h-4" />
+              Delete
+            </button>
           </div>
         </div>
       )}
 
-      {/* Guest List */}
-      <div className={themeConfig.card}>
-        <div className={`px-6 py-4 border-b ${themeConfig.classes.borderDefault} flex items-center justify-between`}>
-          <div className="flex items-center gap-4">
+      {/* Guest List. The card owns no padding of its own so rows can run
+          edge to edge on narrow screens. */}
+      <div className={`${themeConfig.classes.bgCard} rounded-2xl shadow-lg overflow-hidden`}>
+        <div className={`px-4 sm:px-6 py-3 sm:py-4 border-b ${themeConfig.classes.borderDefault}`}>
+          <label className="flex items-center gap-3 cursor-pointer">
             <input
               type="checkbox"
               checked={selectedGuests.size > 0 && selectedGuests.size === filteredGuests.length}
               onChange={selectAllGuests}
-              className="w-4 h-4 rounded border-stone-300 text-emerald-600 focus:ring-emerald-500"
+              aria-label="Select all guests"
+              className="w-5 h-5 flex-shrink-0 rounded border-stone-300 text-emerald-600 accent-emerald-600 focus:ring-emerald-500"
             />
-            <h3 className={`text-lg font-semibold ${themeConfig.text.body}`}>
-              Guests: {filteredGuests.length} entries ({getTotalPeople(filteredGuests)} people) of {guests.length} entries ({getTotalPeople(guests)} total people)
-            </h3>
-          </div>
+            <span className="min-w-0">
+              <span className={`block text-base sm:text-lg font-semibold ${themeConfig.text.body}`}>
+                {filteredGuests.length} guest{filteredGuests.length === 1 ? '' : 's'}
+                {filteredGuests.length !== guests.length && ` of ${guests.length}`}
+              </span>
+              <span className={`block text-xs sm:text-sm ${themeConfig.text.muted}`}>
+                {getTotalPeople(filteredGuests)} people
+                {filteredGuests.length !== guests.length && ` · ${getTotalPeople(guests)} in total`}
+              </span>
+            </span>
+          </label>
         </div>
-        <div className={`divide-y ${themeConfig.classes.borderDefault}`}>
+        <div className="divide-y divide-stone-200">
           {filteredGuests.map((guest) => (
-            <div key={guest.id} className={themeConfig.listItem.default}>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4 flex-1">
-                  <input
-                    type="checkbox"
-                    checked={selectedGuests.has(guest.id)}
-                    onChange={() => toggleSelectGuest(guest.id)}
-                    className="w-4 h-4 rounded border-stone-300 text-emerald-600 focus:ring-emerald-500"
-                  />
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
-                      <User className={`w-5 h-5 ${themeConfig.icon.color.secondary}`} />
-                      <h4 className={`text-lg font-medium ${themeConfig.text.body}`}>{guest.name}</h4>
-                      {guest.partySize > 1 && (
-                        <span className={`${themeConfig.badge.partySize} flex items-center gap-1`}>
-                          <Users className="w-3 h-3" />
-                          {guest.partySize}
-                        </span>
-                      )}
-                      <span className={guest.tableId ? themeConfig.badge.assigned : themeConfig.badge.unassigned}>
-                        {getTableName(guest.tableId)}
+            <div
+              key={guest.id}
+              className="bg-white px-4 sm:px-6 py-3 transition-colors hover:bg-stone-50"
+            >
+              <div className="flex items-start gap-3">
+                <input
+                  type="checkbox"
+                  checked={selectedGuests.has(guest.id)}
+                  onChange={() => toggleSelectGuest(guest.id)}
+                  aria-label={`Select ${guest.name}`}
+                  className="mt-1 w-5 h-5 flex-shrink-0 rounded border-stone-300 text-emerald-600 accent-emerald-600 focus:ring-emerald-500"
+                />
+
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-start gap-2">
+                    <User className={`w-5 h-5 mt-0.5 flex-shrink-0 hidden sm:block ${themeConfig.icon.color.secondary}`} />
+                    <h4 className={`min-w-0 break-words text-base sm:text-lg font-medium ${themeConfig.text.body}`}>
+                      {guest.name}
+                    </h4>
+                  </div>
+
+                  {/* Badges wrap onto their own line rather than squeezing the
+                      name off screen. */}
+                  <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                    {guest.partySize > 1 && (
+                      <span className={`${themeConfig.badge.partySize} flex items-center gap-1`}>
+                        <Users className="w-3 h-3" />
+                        {guest.partySize}
                       </span>
-                    </div>
-                    <div className={`flex items-center gap-6 text-sm ${themeConfig.text.body}`}>
+                    )}
+                    <span className={guest.tableId ? themeConfig.badge.assigned : themeConfig.badge.unassigned}>
+                      {getTableName(guest.tableId)}
+                    </span>
+                  </div>
+
+                  {(guest.phoneNumber || guest.address) && (
+                    <div className={`mt-1.5 flex flex-col gap-1 text-sm sm:flex-row sm:gap-6 ${themeConfig.text.muted}`}>
                       {guest.phoneNumber && (
-                        <div className="flex items-center gap-1">
-                          <Phone className="w-4 h-4" />
+                        <a
+                          href={`tel:${guest.phoneNumber}`}
+                          className="flex items-center gap-1.5 hover:text-emerald-700"
+                        >
+                          <Phone className="w-4 h-4 flex-shrink-0" />
                           <span>{guest.phoneNumber}</span>
-                        </div>
+                        </a>
                       )}
                       {guest.address && (
-                        <div className="flex items-center gap-1">
-                          <MapPin className="w-4 h-4" />
-                          <span className="truncate max-w-xs">{guest.address}</span>
+                        <div className="flex items-start gap-1.5 min-w-0">
+                          <MapPin className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                          <span className="min-w-0 break-words sm:truncate sm:max-w-xs">
+                            {guest.address}
+                          </span>
                         </div>
                       )}
                     </div>
-                  </div>
+                  )}
                 </div>
-                <div className="flex items-center gap-2">
+
+                <div className="flex flex-shrink-0 items-center gap-1">
                   <button
                     onClick={() => setEditingGuest(guest)}
+                    aria-label={`Edit ${guest.name}`}
                     className={themeConfig.button.edit}
                   >
                     <Edit className="w-4 h-4" />
                   </button>
                   <button
                     onClick={() => handleDeleteGuest(guest.id)}
+                    aria-label={`Delete ${guest.name}`}
                     className={themeConfig.button.delete}
                   >
                     <Trash2 className="w-4 h-4" />
@@ -473,7 +504,7 @@ export default function GuestList() {
             </div>
           ))}
           {filteredGuests.length === 0 && (
-            <div className={`p-12 text-center ${themeConfig.text.muted}`}>
+            <div className={`px-6 py-12 text-center ${themeConfig.text.muted}`}>
               {searchTerm ? 'No guests found matching your search.' : 'No guests added yet.'}
             </div>
           )}
@@ -555,7 +586,7 @@ export default function GuestList() {
                 </select>
               </div>
 
-              <div className="flex gap-3 pt-4">
+              <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:gap-3 sm:pt-4">
                 <button
                   type="submit"
                   className={`flex-1 ${themeConfig.button.primary}`}
@@ -565,7 +596,7 @@ export default function GuestList() {
                 <button
                   type="button"
                   onClick={() => setShowAddGuest(false)}
-                  className={themeConfig.button.secondary}
+                  className={`flex-1 sm:flex-none ${themeConfig.button.secondary}`}
                 >
                   Cancel
                 </button>
@@ -650,7 +681,7 @@ export default function GuestList() {
                 </select>
               </div>
 
-              <div className="flex gap-3 pt-4">
+              <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:gap-3 sm:pt-4">
                 <button
                   type="submit"
                   className={`flex-1 ${themeConfig.button.primary}`}
@@ -660,7 +691,7 @@ export default function GuestList() {
                 <button
                   type="button"
                   onClick={() => setEditingGuest(null)}
-                  className={themeConfig.button.secondary}
+                  className={`flex-1 sm:flex-none ${themeConfig.button.secondary}`}
                 >
                   Cancel
                 </button>

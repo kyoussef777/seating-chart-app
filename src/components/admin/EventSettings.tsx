@@ -88,13 +88,13 @@ export default function EventSettings() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className={`text-2xl font-bold ${themeConfig.text.heading}`}>Event Settings</h2>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <h2 className={`hidden md:block text-xl sm:text-2xl font-bold ${themeConfig.text.heading}`}>Event Settings</h2>
         <a
           href="/"
           target="_blank"
           rel="noopener noreferrer"
-          className={`inline-flex items-center gap-2 px-4 py-2 ${themeConfig.button.secondary}`}
+          className={`inline-flex items-center justify-center gap-2 px-4 py-2 ${themeConfig.button.secondary}`}
         >
           <Eye className="w-4 h-4" />
           Preview Guest Portal
@@ -147,7 +147,7 @@ export default function EventSettings() {
             </div>
 
             <div>
-              <div className="flex items-center justify-between">
+              <div className="flex items-start justify-between gap-4">
                 <div>
                   <label htmlFor="searchEnabled" className={themeConfig.text.label}>
                     Enable Guest Search
@@ -161,12 +161,12 @@ export default function EventSettings() {
                   role="switch"
                   aria-checked={settings.searchEnabled}
                   onClick={() => setSettings({ ...settings, searchEnabled: !settings.searchEnabled })}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 ${
+                  className={`relative mt-0.5 inline-flex h-7 w-12 flex-shrink-0 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 ${
                     settings.searchEnabled ? 'bg-emerald-600' : 'bg-stone-300'
                   }`}
                 >
                   <span
-                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${
                       settings.searchEnabled ? 'translate-x-6' : 'translate-x-1'
                     }`}
                   />
@@ -175,7 +175,7 @@ export default function EventSettings() {
             </div>
 
             <div>
-              <div className="flex items-center justify-between">
+              <div className="flex items-start justify-between gap-4">
                 <div>
                   <label htmlFor="addressCollectionEnabled" className={themeConfig.text.label}>
                     Ask Guests for Their Address
@@ -196,12 +196,12 @@ export default function EventSettings() {
                       addressCollectionEnabled: !settings.addressCollectionEnabled,
                     })
                   }
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 ${
+                  className={`relative mt-0.5 inline-flex h-7 w-12 flex-shrink-0 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 ${
                     settings.addressCollectionEnabled ? 'bg-emerald-600' : 'bg-stone-300'
                   }`}
                 >
                   <span
-                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${
                       settings.addressCollectionEnabled ? 'translate-x-6' : 'translate-x-1'
                     }`}
                   />
@@ -209,7 +209,7 @@ export default function EventSettings() {
               </div>
             </div>
 
-            <div className={`flex items-center justify-between pt-4 border-t ${themeConfig.classes.borderDefault}`}>
+            <div className={`flex flex-col gap-3 pt-4 border-t sm:flex-row sm:items-center sm:justify-between ${themeConfig.classes.borderDefault}`}>
               <div>
                 {settings.updatedAt && (
                   <p className={`text-xs ${themeConfig.text.muted}`}>
@@ -217,7 +217,7 @@ export default function EventSettings() {
                   </p>
                 )}
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center justify-end gap-3">
                 {saved && (
                   <span className={`${themeConfig.theme.semantic.success.text} text-sm font-medium`}>
                     Settings saved!
@@ -226,7 +226,7 @@ export default function EventSettings() {
                 <button
                   type="submit"
                   disabled={saving}
-                  className={`inline-flex items-center gap-2 px-4 py-2 ${themeConfig.button.primary}`}
+                  className={`inline-flex flex-1 items-center justify-center gap-2 px-4 py-2 sm:flex-none ${themeConfig.button.primary}`}
                 >
                   {saving ? (
                     <>
@@ -292,7 +292,7 @@ export default function EventSettings() {
       {/* Quick Stats */}
       <div className={themeConfig.card}>
         <h3 className={`text-lg font-semibold ${themeConfig.text.heading} mb-4`}>Quick Information</h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 sm:gap-4">
           <div className={`${themeConfig.theme.gradient.floral} rounded-lg p-4 ${themeConfig.classes.borderBeige}`}>
             <h4 className={`font-medium ${themeConfig.text.heading} mb-1`}>Guest Portal URL</h4>
             <p className={`text-sm ${themeConfig.text.body} break-all`}>

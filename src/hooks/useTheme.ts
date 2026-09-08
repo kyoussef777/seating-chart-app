@@ -1,5 +1,9 @@
 import { theme, themeClasses, combineThemeClasses } from '@/lib/theme';
 
+/** Minimum comfortable tap target on touch screens (44px), relaxed on desktop. */
+const touch = 'min-h-11 sm:min-h-0';
+const iconTouch = 'inline-flex items-center justify-center min-h-11 min-w-11 sm:min-h-0 sm:min-w-0';
+
 export function useTheme() {
   return {
     theme,
@@ -8,23 +12,26 @@ export function useTheme() {
 
     // Pre-built component classes
     page: themeClasses.bgPage,
-    card: `${themeClasses.bgCard} rounded-2xl shadow-lg p-6`,
-    cardBeige: `${themeClasses.bgBeige} rounded-2xl shadow-lg p-6`,
+    // Tighter padding on phones so cards do not eat the narrow viewport.
+    card: `${themeClasses.bgCard} rounded-2xl shadow-lg p-4 sm:p-6`,
+    cardBeige: `${themeClasses.bgBeige} rounded-2xl shadow-lg p-4 sm:p-6`,
     cardBorder: themeClasses.borderLight,
 
+    // `touch` keeps every control at the 44px minimum on phones and drops
+    // back to the compact desktop metrics from `sm` up.
     button: {
-      primary: `${themeClasses.btnPrimary} py-3 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed`,
-      secondary: `${themeClasses.btnSecondary} py-2 px-4 rounded-lg transition-colors`,
-      tertiary: `${themeClasses.btnTertiary} py-2 px-4 rounded-lg transition-colors`,
-      danger: `${themeClasses.btnDanger} py-2 px-4 rounded-lg transition-colors`,
-      edit: `${themeClasses.btnEdit} p-2 rounded-lg transition-colors`,
-      delete: `${themeClasses.btnDelete} p-2 rounded-lg transition-colors`,
-      confirm: `${themeClasses.btnConfirm} p-2 rounded-lg transition-colors`,
-      cancel: `${themeClasses.btnCancel} p-2 rounded-lg transition-colors`,
+      primary: `${touch} ${themeClasses.btnPrimary} py-3 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed`,
+      secondary: `${touch} ${themeClasses.btnSecondary} py-2 px-4 rounded-lg transition-colors`,
+      tertiary: `${touch} ${themeClasses.btnTertiary} py-2 px-4 rounded-lg transition-colors`,
+      danger: `${touch} ${themeClasses.btnDanger} py-2 px-4 rounded-lg transition-colors`,
+      edit: `${iconTouch} ${themeClasses.btnEdit} p-2 rounded-lg transition-colors`,
+      delete: `${iconTouch} ${themeClasses.btnDelete} p-2 rounded-lg transition-colors`,
+      confirm: `${iconTouch} ${themeClasses.btnConfirm} p-2 rounded-lg transition-colors`,
+      cancel: `${iconTouch} ${themeClasses.btnCancel} p-2 rounded-lg transition-colors`,
     },
 
-    input: `w-full px-3 py-2 rounded-lg transition-colors ${themeClasses.input}`,
-    inputBeige: `w-full px-3 py-2 rounded-lg transition-colors ${themeClasses.inputBeige}`,
+    input: `w-full px-3 py-2.5 sm:py-2 rounded-lg transition-colors ${themeClasses.input}`,
+    inputBeige: `w-full px-3 py-2.5 sm:py-2 rounded-lg transition-colors ${themeClasses.inputBeige}`,
 
     text: {
       heading: `font-bold ${themeClasses.textPrimary}`,
@@ -60,10 +67,12 @@ export function useTheme() {
       default: `${themeClasses.badgeDefault} text-xs px-2 py-1 rounded-full font-medium`,
     },
 
+    // Dialogs behave as bottom sheets on phones (thumb-reachable, keyboard
+    // safe) and as centred cards from `sm` up.
     modal: {
-      overlay: `fixed inset-0 ${themeClasses.modalOverlay} flex items-center justify-center z-50`,
-      container: `${themeClasses.modalBg} rounded-xl shadow-2xl p-6 max-w-md w-full mx-4`,
-      title: `text-xl font-bold ${themeClasses.modalTitle} mb-4`,
+      overlay: `fixed inset-0 ${themeClasses.modalOverlay} flex items-end sm:items-center justify-center z-50 p-0 sm:p-4`,
+      container: `${themeClasses.modalBg} w-full sm:max-w-md rounded-t-2xl sm:rounded-xl shadow-2xl p-5 sm:p-6 max-h-[90dvh] overflow-y-auto pb-safe sm:pb-6`,
+      title: `text-lg sm:text-xl font-bold ${themeClasses.modalTitle} mb-4`,
     },
 
     toast: {
@@ -79,14 +88,14 @@ export function useTheme() {
     },
 
     header: {
-      container: `${theme.components.header.background} p-4`,
+      container: `${theme.components.header.background} sticky top-0 z-40`,
       text: theme.components.header.text,
       link: theme.components.header.link,
     },
 
     tab: {
-      active: `${theme.components.tab.active} border-b-2 px-4 py-2 font-medium`,
-      inactive: `${theme.components.tab.inactive} border-b-2 px-4 py-2 font-medium`,
+      active: `${theme.components.tab.active} inline-flex items-center gap-2 whitespace-nowrap border-b-2 px-4 py-3 font-medium`,
+      inactive: `${theme.components.tab.inactive} inline-flex items-center gap-2 whitespace-nowrap border-b-2 px-4 py-3 font-medium`,
     },
 
     loading: {

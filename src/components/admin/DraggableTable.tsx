@@ -43,6 +43,10 @@ interface DraggableTableProps {
   onRotate: (tableId: string, rotation: number) => void;
   onRename: (tableId: string, newName: string) => void;
   allTableNames: string[];
+  /** Touch screens get no HTML5 drag events; the canvas moves the table from
+   *  raw touch events instead. */
+  onTouchDragStart?: (tableId: string, clientX: number, clientY: number) => void;
+  onSeatGuest?: (guest: Guest) => void;
 }
 
 function DraggableTable({
@@ -53,6 +57,8 @@ function DraggableTable({
   onRotate,
   onRename,
   allTableNames,
+  onTouchDragStart,
+  onSeatGuest,
 }: DraggableTableProps) {
   const themeConfig = useTheme();
   const [showGuestList, setShowGuestList] = useState(false);
@@ -65,7 +71,7 @@ function DraggableTable({
 
   // Close popup when clicking outside
   useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
+    function handleClickOutside(event: MouseEvent | TouchEvent) {
       if (popupRef.current && !popupRef.current.contains(event.target as Node)) {
         setShowGuestList(false);
       }
@@ -73,10 +79,12 @@ function DraggableTable({
 
     if (showGuestList) {
       document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('touchstart', handleClickOutside);
     }
 
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
     };
   }, [showGuestList]);
 
@@ -202,9 +210,18 @@ function DraggableTable({
     return null;
   };
 
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (!onTouchDragStart || e.touches.length !== 1) return;
+    // Let the controls, the rename field and the guest popup handle their own
+    // taps rather than starting a drag.
+    if ((e.target as HTMLElement).closest('button, input, [data-no-drag]')) return;
+    onTouchDragStart(table.id, e.touches[0].clientX, e.touches[0].clientY);
+  };
+
   return (
     <div
       ref={attachRef}
+      onTouchStart={handleTouchStart}
       className={cn(
         themeConfig.table.default,
         'p-3 relative transition-all duration-200 flex flex-col items-center justify-center',
@@ -228,10 +245,11 @@ function DraggableTable({
             const newRotation = ((table.rotation || 0) + 90) % 360;
             onRotate(table.id, newRotation);
           }}
-          className={`${themeConfig.button.edit} flex-shrink-0`}
+          className={cn(themeConfig.button.edit, 'h-7 w-7 min-h-0 min-w-0 p-0 flex-shrink-0')}
           title="Rotate table"
+          aria-label={`Rotate ${table.name}`}
         >
-          <RotateCw className="w-3 h-3" />
+          <RotateCw className="w-3.5 h-3.5" />
         </button>
         <button
           onMouseDown={(e) => e.stopPropagation()}
@@ -239,10 +257,11 @@ function DraggableTable({
             e.stopPropagation();
             onDelete();
           }}
-          className={`${themeConfig.button.delete} flex-shrink-0`}
+          className={cn(themeConfig.button.delete, 'h-7 w-7 min-h-0 min-w-0 p-0 flex-shrink-0')}
           title="Delete table"
+          aria-label={`Delete ${table.name}`}
         >
-          <Trash2 className="w-3 h-3" />
+          <Trash2 className="w-3.5 h-3.5" />
         </button>
       </div>
 
@@ -325,7 +344,7 @@ function DraggableTable({
         <div
           className={cn(
             'absolute inset-0 border-2 border-dashed pointer-events-none',
-            !isFull ? 'border-green-400 bg-green-100 bg-opacity-50' : 'border-red-400 bg-red-100 bg-opacity-50'
+            !isFull ? 'border-green-400 bg-green-100/50' : 'border-red-400 bg-red-100/50'
           )}
           style={{ borderRadius: getBorderRadius() }}
         >
@@ -356,8 +375,13 @@ function DraggableTable({
       {showGuestList && table.guests.length > 0 && (
         <div
           ref={popupRef}
+          data-no-drag
           className={cn(
-            'absolute left-full top-0 ml-2 p-3 rounded-lg shadow-xl z-50 min-w-[220px]',
+            // Below the table on narrow screens (where `left-full` would push
+            // it off the canvas), beside it from `sm` up.
+            'absolute z-50 p-3 rounded-lg shadow-xl w-56',
+            'left-1/2 top-full mt-2 -translate-x-1/2',
+            'sm:left-full sm:top-0 sm:mt-0 sm:ml-2 sm:translate-x-0 sm:min-w-[220px] sm:w-auto',
             `${themeConfig.classes.bgCard} border-2 ${themeConfig.classes.borderPrimary}`
           )}
           onClick={(e) => e.stopPropagation()}
@@ -383,6 +407,7 @@ function DraggableTable({
                 guest={guest}
                 showUnassign
                 onUnassign={() => onUnassignGuest(guest.id)}
+                onSeat={onSeatGuest ? () => onSeatGuest(guest) : undefined}
               />
             ))}
           </div>

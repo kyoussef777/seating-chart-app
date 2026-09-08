@@ -51,7 +51,7 @@ export function Toast({ id, type, message, duration = 5000, onClose }: ToastProp
 
   return (
     <div
-      className={`flex items-start gap-3 p-4 rounded-lg border-l-4 shadow-lg min-w-[320px] max-w-md animate-slide-in ${toastStyles[type]}`}
+      className={`flex w-full items-start gap-3 p-4 rounded-lg border-l-4 shadow-lg sm:w-auto sm:min-w-[320px] max-w-md animate-slide-in ${toastStyles[type]}`}
       role="alert"
     >
       <Icon className={`w-5 h-5 flex-shrink-0 mt-0.5 ${iconStyles[type]}`} />

@@ -86,3 +86,64 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .garden-enter { animation: none }
 }
+
+/* ---- Mobile admin helpers ---- */
+
+/* iOS zooms the page when a focused control renders below 16px. The admin
+   toolbars use small controls on purpose, so lift the font size on touch
+   devices only rather than growing every control everywhere. */
+@media (pointer: coarse) {
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+
+/* Horizontal chip/tab strips: scrollable without a visible scrollbar. */
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Bottom navigation sits on the home-indicator inset. */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.mb-safe {
+  margin-bottom: env(safe-area-inset-bottom);
+}
+
+/* Reserve room for the mobile bottom nav (h-16 = 4rem) plus the inset. */
+.pb-nav {
+  padding-bottom: calc(5rem + env(safe-area-inset-bottom));
+}
+@media (min-width: 768px) {
+  .pb-nav {
+    padding-bottom: 2rem;
+  }
+}
+
+/* Sheets slide up from the bottom edge on small screens. */
+@keyframes sheet-up {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+.animate-sheet-up {
+  animation: sheet-up 0.22s cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-sheet-up,
+  .animate-slide-in,
+  .animate-fadeIn {
+    animation: none;
+  }
+}

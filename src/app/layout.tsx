@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import {
   Geist,
   Geist_Mono,
@@ -44,6 +44,16 @@ const cormorantGaramond = Cormorant_Garamond({
   subsets: ["latin"],
   weight: ["300", "400", "500", "600"],
 });
+
+// Mobile: fill the notch area so the admin bottom nav can sit on the safe
+// inset, and keep pinch-zoom available for the seating chart.
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
+  viewportFit: "cover",
+  themeColor: "#fafaf9",
+};
 
 export const metadata: Metadata = {
   // Absolute URLs for OG images; Vercel sets VERCEL_PROJECT_PRODUCTION_URL itself.
