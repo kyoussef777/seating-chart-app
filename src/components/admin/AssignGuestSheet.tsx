@@ -48,7 +48,7 @@ export default function AssignGuestSheet({ guest, tables, onAssign, onClose }: A
       aria-label={`Seat ${guest.name}`}
     >
       <div
-        className="flex max-h-[85dvh] w-full flex-col rounded-t-2xl bg-white shadow-2xl animate-sheet-up sm:max-w-md sm:rounded-2xl"
+        className="flex max-h-[85vh] max-h-[85dvh] w-full flex-col rounded-t-2xl bg-white shadow-2xl animate-sheet-up sm:max-w-md sm:rounded-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start justify-between gap-3 border-b border-stone-200 px-4 py-3">

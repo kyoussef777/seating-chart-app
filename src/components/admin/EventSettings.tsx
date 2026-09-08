@@ -35,7 +35,7 @@ export default function EventSettings() {
     try {
       const response = await fetch('/api/settings');
       const data = await response.json();
-      if (response.ok) {
+      if (response.ok && data.settings) {
         setSettings(data.settings);
       }
     } catch (error) {
@@ -66,7 +66,7 @@ export default function EventSettings() {
 
       const data = await response.json();
       if (response.ok) {
-        setSettings(data.settings);
+        if (data.settings) setSettings(data.settings);
         setSaved(true);
         setTimeout(() => setSaved(false), 3000);
       }

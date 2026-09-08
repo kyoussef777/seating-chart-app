@@ -71,7 +71,7 @@ export function useTheme() {
     // safe) and as centred cards from `sm` up.
     modal: {
       overlay: `fixed inset-0 ${themeClasses.modalOverlay} flex items-end sm:items-center justify-center z-50 p-0 sm:p-4`,
-      container: `${themeClasses.modalBg} w-full sm:max-w-md rounded-t-2xl sm:rounded-xl shadow-2xl p-5 sm:p-6 max-h-[90dvh] overflow-y-auto pb-safe sm:pb-6`,
+      container: `${themeClasses.modalBg} w-full sm:max-w-md rounded-t-2xl sm:rounded-xl shadow-2xl p-5 sm:p-6 max-h-[90vh] max-h-[90dvh] overflow-y-auto pb-safe sm:pb-6`,
       title: `text-lg sm:text-xl font-bold ${themeClasses.modalTitle} mb-4`,
     },
 
