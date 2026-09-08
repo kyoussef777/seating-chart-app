@@ -904,12 +904,13 @@ export default function SeatingChart() {
       return;
     }
 
-    // Otherwise pan the floor plan.
-    if (touchPanRef.current) {
-      setPanOffset((prev) => ({
-        x: prev.x + (touch.clientX - touchPanRef.current!.x),
-        y: prev.y + (touch.clientY - touchPanRef.current!.y),
-      }));
+    // Otherwise pan the floor plan. The origin is read before the updater
+    // runs, so a touchend clearing the ref in between cannot fault it.
+    const panFrom = touchPanRef.current;
+    if (panFrom) {
+      const deltaX = touch.clientX - panFrom.x;
+      const deltaY = touch.clientY - panFrom.y;
+      setPanOffset((prev) => ({ x: prev.x + deltaX, y: prev.y + deltaY }));
       touchPanRef.current = { x: touch.clientX, y: touch.clientY };
     }
   };

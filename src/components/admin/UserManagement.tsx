@@ -39,7 +39,7 @@ export default function UserManagement() {
         const response = await fetch('/api/users');
         const data = await response.json();
         if (response.ok) {
-          setUsers(data.users);
+          setUsers(data.users ?? []);
         } else {
           toast.error('Failed to load users');
         }
