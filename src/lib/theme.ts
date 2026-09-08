@@ -166,7 +166,7 @@ export const theme = {
 
   // Modal/Overlay
   modal: {
-    overlay: 'bg-emerald-900 bg-opacity-40',  // Dark green overlay
+    overlay: 'bg-emerald-900/40',  // Dark green overlay
     background: 'bg-white',
     border: 'border-emerald-200',
     title: 'text-emerald-900',

@@ -2,12 +2,14 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useDrop } from 'react-dnd';
-import { Users, Search, UserX, Armchair, RefreshCw } from 'lucide-react';
+import { Users, Search, UserX, Armchair, RefreshCw, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/hooks/useTheme';
 import { useToast } from '@/contexts/ToastContext';
 import { useDebounce } from '@/hooks/useDebounce';
+import { useIsTouch } from '@/hooks/useMediaQuery';
 import DraggableGuest from './DraggableGuest';
+import AssignGuestSheet from './AssignGuestSheet';
 import {
   canSeat,
   fetchSeating,
@@ -24,11 +26,13 @@ function TableCard({
   table,
   onDropGuest,
   onUnassign,
+  onSeatGuest,
   highlight,
 }: {
   table: Table;
   onDropGuest: (guestId: string, tableId: string) => void;
   onUnassign: (guestId: string) => void;
+  onSeatGuest: (guest: Guest) => void;
   highlight: string;
 }) {
   const themeConfig = useTheme();
@@ -78,12 +82,17 @@ function TableCard({
       <div className="flex-1 space-y-1 p-2 min-h-[64px]">
         {table.guests.length === 0 ? (
           <p className="px-2 py-4 text-center text-xs text-stone-400">
-            Drag guests here
+            No one seated yet
           </p>
         ) : (
           table.guests.map((guest) => (
             <div key={guest.id} className={cn(matches(guest) && 'rounded-lg ring-2 ring-amber-400')}>
-              <DraggableGuest guest={guest} showUnassign onUnassign={() => onUnassign(guest.id)} />
+              <DraggableGuest
+                guest={guest}
+                showUnassign
+                onUnassign={() => onUnassign(guest.id)}
+                onSeat={() => onSeatGuest(guest)}
+              />
             </div>
           ))
         )}
@@ -96,13 +105,18 @@ function TableCard({
 function UnassignedColumn({
   guests,
   onUnassignDrop,
+  onSeatGuest,
   highlight,
 }: {
   guests: Guest[];
   onUnassignDrop: (guestId: string) => void;
+  onSeatGuest: (guest: Guest) => void;
   highlight: string;
 }) {
   const themeConfig = useTheme();
+  // On phones this column sits above the tables, so it collapses to keep the
+  // tables reachable without a long scroll.
+  const [open, setOpen] = useState(true);
   const [{ isOver, canDropHere }, drop] = useDrop(
     () => ({
       accept: 'guest',
@@ -126,16 +140,34 @@ function UnassignedColumn({
         isOver && canDropHere ? 'border-amber-400 bg-amber-50' : 'border-stone-200'
       )}
     >
-      <div className="flex items-baseline justify-between gap-2 border-b border-stone-200 px-4 py-3">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        className="flex w-full items-center justify-between gap-2 border-b border-stone-200 px-4 py-3 text-left lg:cursor-default"
+      >
         <h3 className={cn('flex items-center gap-2 text-base', themeConfig.text.heading)}>
           <UserX className="h-4 w-4" />
           Not seated
         </h3>
-        <span className="flex-shrink-0 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
-          {guests.length} · {seats} seat{seats === 1 ? '' : 's'}
+        <span className="flex flex-shrink-0 items-center gap-2">
+          <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
+            {guests.length} · {seats} seat{seats === 1 ? '' : 's'}
+          </span>
+          <ChevronDown
+            className={cn(
+              'h-4 w-4 text-stone-400 transition-transform lg:hidden',
+              open && 'rotate-180'
+            )}
+          />
         </span>
-      </div>
-      <div className="max-h-[70vh] flex-1 space-y-1 overflow-y-auto p-2">
+      </button>
+      <div
+        className={cn(
+          'max-h-[45vh] flex-1 space-y-1 overflow-y-auto overscroll-contain p-2 lg:block lg:max-h-[70vh]',
+          !open && 'hidden'
+        )}
+      >
         {guests.length === 0 ? (
           <p className="px-2 py-6 text-center text-xs text-stone-400">Everyone has a table.</p>
         ) : (
@@ -147,7 +179,7 @@ function UnassignedColumn({
                   'rounded-lg ring-2 ring-amber-400'
               )}
             >
-              <DraggableGuest guest={guest} />
+              <DraggableGuest guest={guest} onSeat={() => onSeatGuest(guest)} />
             </div>
           ))
         )}
@@ -164,6 +196,8 @@ export default function RosterView() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebounce(search, 250);
+  const isTouch = useIsTouch();
+  const [seatingGuest, setSeatingGuest] = useState<Guest | null>(null);
 
   const tablesRef = useRef<Table[]>([]);
   const unassignedRef = useRef<Guest[]>([]);
@@ -273,34 +307,65 @@ export default function RosterView() {
 
   return (
     <div className="space-y-4">
-      <div className={cn(themeConfig.card, 'flex flex-wrap items-center gap-4')}>
-        <div className="relative min-w-[220px] flex-1">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Find a guest or table…"
-            className={cn(themeConfig.input, 'pl-9')}
-          />
+      <div className={cn(themeConfig.card, 'space-y-3 lg:flex lg:flex-wrap lg:items-center lg:gap-4 lg:space-y-0')}>
+        <div className="flex items-center gap-2 lg:min-w-[220px] lg:flex-1">
+          <div className="relative flex-1">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Find a guest or table…"
+              className={cn(themeConfig.input, 'pl-9')}
+            />
+          </div>
+          <button
+            onClick={() => load()}
+            className={cn(themeConfig.button.tertiary, 'flex-shrink-0 lg:hidden')}
+            aria-label="Reload roster"
+          >
+            <RefreshCw className="h-4 w-4" />
+          </button>
         </div>
-        <div className="flex flex-wrap items-center gap-3 text-sm">
-          <span className="flex items-center gap-1.5" title="Guests seated">
+
+        {/* Stats read as chips on phones so they wrap predictably instead of
+            colliding with the search field. */}
+        <div className="flex flex-wrap items-center gap-2 text-sm lg:gap-3">
+          <span
+            className="flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 lg:bg-transparent lg:px-0 lg:py-0"
+            title="Guests seated"
+          >
             <Armchair className="h-4 w-4 text-emerald-600" />
             <strong>{stats.seated}</strong> seated
             <span className={themeConfig.text.muted}>({stats.seatedSeats} seats)</span>
           </span>
-          <span className="flex items-center gap-1.5" title="Guests without a table">
+          <span
+            className="flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-1 lg:bg-transparent lg:px-0 lg:py-0"
+            title="Guests without a table"
+          >
             <UserX className="h-4 w-4 text-amber-600" />
             <strong>{stats.unseated}</strong> not seated
           </span>
-          <span className="flex items-center gap-1.5" title="Total seats across all tables">
+          <span
+            className="flex items-center gap-1.5 rounded-full bg-stone-100 px-2.5 py-1 lg:bg-transparent lg:px-0 lg:py-0"
+            title="Total seats across all tables"
+          >
             <Users className="h-4 w-4 text-stone-500" />
             <strong>{stats.capacity}</strong> capacity
           </span>
-          <button onClick={() => load()} className={themeConfig.button.tertiary} title="Reload">
+          <button
+            onClick={() => load()}
+            className={cn(themeConfig.button.tertiary, 'hidden lg:inline-flex')}
+            title="Reload"
+          >
             <RefreshCw className="h-4 w-4" />
           </button>
         </div>
+
+        {isTouch && (
+          <p className={cn('text-xs lg:hidden', themeConfig.text.muted)}>
+            Tap a guest to seat or move them.
+          </p>
+        )}
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-4">
@@ -308,6 +373,7 @@ export default function RosterView() {
           <UnassignedColumn
             guests={visibleUnassigned}
             onUnassignDrop={(id) => move(id, null)}
+            onSeatGuest={setSeatingGuest}
             highlight={debouncedSearch}
           />
         </div>
@@ -329,6 +395,7 @@ export default function RosterView() {
                   table={table}
                   onDropGuest={(guestId, tableId) => move(guestId, tableId)}
                   onUnassign={(guestId) => move(guestId, null)}
+                  onSeatGuest={setSeatingGuest}
                   highlight={debouncedSearch}
                 />
               ))}
@@ -336,6 +403,18 @@ export default function RosterView() {
           )}
         </div>
       </div>
+
+      {seatingGuest && (
+        <AssignGuestSheet
+          guest={seatingGuest}
+          tables={tables}
+          onAssign={(tableId) => {
+            move(seatingGuest.id, tableId);
+            setSeatingGuest(null);
+          }}
+          onClose={() => setSeatingGuest(null)}
+        />
+      )}
     </div>
   );
 }

@@ -1,8 +1,10 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, Trash2, Save, X, Check, Eye, EyeOff } from 'lucide-react';
+import { Plus, Trash2, Save, X, Check, Eye, EyeOff, User as UserIcon } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { useTheme } from '@/hooks/useTheme';
+import { useIsMobile } from '@/hooks/useMediaQuery';
 import { useToast } from '@/contexts/ToastContext';
 
 interface User {
@@ -20,6 +22,9 @@ interface EditingUser {
 export default function UserManagement() {
   const themeConfig = useTheme();
   const toast = useToast();
+  // The card list and the table are both in the DOM (one hidden by CSS), so
+  // autofocus has to go to whichever is actually visible.
+  const isMobile = useIsMobile();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
@@ -170,24 +175,186 @@ export default function UserManagement() {
     );
   }
 
+  const formatCreated = (value: string) =>
+    new Date(value).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+
   return (
-    <div className="p-6">
-      <div className="mb-6 flex items-center justify-between">
+    <div className="space-y-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className={`text-2xl font-bold ${themeConfig.text.heading}`}>User Management</h2>
-          <p className={themeConfig.text.muted}>Manage admin users who can access the dashboard</p>
+          <h2 className={`hidden md:block text-xl sm:text-2xl font-bold ${themeConfig.text.heading}`}>User Management</h2>
+          <p className={`text-sm ${themeConfig.text.muted}`}>
+            Manage admin users who can access the dashboard
+          </p>
         </div>
         <button
           onClick={() => setAddingNew(true)}
-          className={`${themeConfig.button.primary} flex items-center gap-2`}
+          disabled={addingNew}
+          className={`${themeConfig.button.primary} inline-flex items-center justify-center gap-2 disabled:opacity-50`}
         >
           <Plus className="w-4 h-4" />
           Add User
         </button>
       </div>
 
-      {/* Excel-like table */}
-      <div className={`${themeConfig.card} overflow-hidden`}>
+      {/* Phones: a card per user. The desktop table below cannot fit a narrow
+          viewport without horizontal scrolling, which makes the row actions
+          hard to reach. */}
+      <div className="space-y-3 md:hidden">
+        {addingNew && (
+          <div className={`${themeConfig.card} space-y-3 border-2 border-emerald-200`}>
+            <h3 className={`font-semibold ${themeConfig.text.heading}`}>New user</h3>
+            <div>
+              <label className={`block ${themeConfig.text.label} mb-1`} htmlFor="new-username">
+                Username
+              </label>
+              <input
+                id="new-username"
+                type="text"
+                value={newUser.username}
+                onChange={(e) => setNewUser(prev => ({ ...prev, username: e.target.value }))}
+                placeholder="At least 3 characters"
+                className={themeConfig.input}
+                autoFocus={isMobile}
+              />
+            </div>
+            <div>
+              <label className={`block ${themeConfig.text.label} mb-1`} htmlFor="new-password">
+                Password
+              </label>
+              <div className="flex items-center gap-2">
+                <input
+                  id="new-password"
+                  type={showPassword['new'] ? 'text' : 'password'}
+                  value={newUser.password}
+                  onChange={(e) => setNewUser(prev => ({ ...prev, password: e.target.value }))}
+                  placeholder="At least 8 characters"
+                  className={themeConfig.input}
+                />
+                <button
+                  onClick={() => setShowPassword(prev => ({ ...prev, new: !prev['new'] }))}
+                  aria-label={showPassword['new'] ? 'Hide password' : 'Show password'}
+                  className={themeConfig.button.cancel}
+                >
+                  {showPassword['new'] ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <button onClick={handleAddUser} className={`flex-1 ${themeConfig.button.primary}`}>
+                Create user
+              </button>
+              <button
+                onClick={() => {
+                  setAddingNew(false);
+                  setNewUser({ username: '', password: '' });
+                }}
+                className={`flex-1 ${themeConfig.button.secondary}`}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+
+        {users.map((user) => {
+          const isEditing = editingUserId === user.id;
+
+          return (
+            <div
+              key={user.id}
+              className={cn(themeConfig.card, 'space-y-3', isEditing && 'border-2 border-emerald-200')}
+            >
+              {isEditing ? (
+                <>
+                  <div>
+                    <label className={`block ${themeConfig.text.label} mb-1`}>Username</label>
+                    <input
+                      type="text"
+                      value={editingData.username}
+                      onChange={(e) => setEditingData(prev => ({ ...prev, username: e.target.value }))}
+                      className={themeConfig.input}
+                      autoFocus={isMobile}
+                    />
+                  </div>
+                  <div>
+                    <label className={`block ${themeConfig.text.label} mb-1`}>New password</label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type={showPassword[user.id] ? 'text' : 'password'}
+                        value={editingData.password}
+                        onChange={(e) => setEditingData(prev => ({ ...prev, password: e.target.value }))}
+                        placeholder="Leave empty to keep current"
+                        className={themeConfig.input}
+                      />
+                      <button
+                        onClick={() => setShowPassword(prev => ({ ...prev, [user.id]: !prev[user.id] }))}
+                        aria-label={showPassword[user.id] ? 'Hide password' : 'Show password'}
+                        className={themeConfig.button.cancel}
+                      >
+                        {showPassword[user.id] ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <button onClick={handleSaveEdit} className={`flex-1 ${themeConfig.button.primary}`}>
+                      Save changes
+                    </button>
+                    <button onClick={handleCancelEdit} className={`flex-1 ${themeConfig.button.secondary}`}>
+                      Cancel
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex min-w-0 items-start gap-3">
+                    <span className={`mt-0.5 flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-stone-100 ${themeConfig.icon.color.secondary}`}>
+                      <UserIcon className="h-4 w-4" />
+                    </span>
+                    <div className="min-w-0">
+                      <p className={`break-words font-medium ${themeConfig.text.body}`}>{user.username}</p>
+                      <p className={`text-xs ${themeConfig.text.muted}`}>
+                        Added {formatCreated(user.createdAt)}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex flex-shrink-0 items-center gap-1">
+                    <button
+                      onClick={() => handleStartEdit(user)}
+                      aria-label={`Edit ${user.username}`}
+                      className={themeConfig.button.edit}
+                    >
+                      <Save className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => handleDeleteUser(user.id)}
+                      aria-label={`Delete ${user.username}`}
+                      className={themeConfig.button.delete}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })}
+
+        {users.length === 0 && !addingNew && (
+          <div className={`${themeConfig.card} text-center ${themeConfig.text.muted}`}>
+            No users found. Tap &ldquo;Add User&rdquo; to create one.
+          </div>
+        )}
+      </div>
+
+      {/* Desktop: spreadsheet-style table */}
+      <div className={`hidden md:block ${themeConfig.classes.bgCard} rounded-2xl shadow-lg overflow-hidden`}>
         <table className="w-full">
           <thead>
             <tr className={`${themeConfig.theme.secondary[50]} border-b ${themeConfig.classes.borderDefault}`}>
@@ -205,7 +372,7 @@ export default function UserManagement() {
               </th>
             </tr>
           </thead>
-          <tbody className={`divide-y ${themeConfig.classes.borderDefault}`}>
+          <tbody className="divide-y divide-stone-200">
             {/* Add new user row */}
             {addingNew && (
               <tr className={themeConfig.theme.secondary[100]}>
@@ -216,7 +383,7 @@ export default function UserManagement() {
                     onChange={(e) => setNewUser(prev => ({ ...prev, username: e.target.value }))}
                     placeholder="Enter username"
                     className={`${themeConfig.input} w-full`}
-                    autoFocus
+                    autoFocus={!isMobile}
                   />
                 </td>
                 <td className="px-6 py-3">
@@ -279,7 +446,7 @@ export default function UserManagement() {
                         value={editingData.username}
                         onChange={(e) => setEditingData(prev => ({ ...prev, username: e.target.value }))}
                         className={`${themeConfig.input} w-full`}
-                        autoFocus
+                        autoFocus={!isMobile}
                       />
                     ) : (
                       <div className="flex items-center gap-2">
@@ -309,13 +476,7 @@ export default function UserManagement() {
                     )}
                   </td>
                   <td className={`px-6 py-3 text-sm ${themeConfig.text.muted}`}>
-                    {new Date(user.createdAt).toLocaleDateString('en-US', {
-                      year: 'numeric',
-                      month: 'short',
-                      day: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    })}
+                    {formatCreated(user.createdAt)}
                   </td>
                   <td className="px-6 py-3">
                     <div className="flex items-center justify-center gap-2">
@@ -371,7 +532,7 @@ export default function UserManagement() {
         </table>
       </div>
 
-      <div className={`mt-4 text-sm ${themeConfig.text.muted}`}>
+      <div className={`text-sm ${themeConfig.text.muted}`}>
         <p>• Password requirements: Minimum 8 characters</p>
         <p>• Username requirements: Minimum 3 characters, must be unique</p>
         <p>• Cannot delete the last admin user</p>

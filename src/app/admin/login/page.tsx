@@ -46,7 +46,7 @@ export default function LoginPage() {
   return (
     <div className={`min-h-screen ${themeConfig.page} flex items-center justify-center p-4`}>
       <div className="max-w-md w-full">
-        <div className={`bg-white rounded-2xl shadow-xl p-8 ${themeConfig.classes.borderBeige}`}>
+        <div className={`bg-white rounded-2xl shadow-xl p-6 sm:p-8 ${themeConfig.classes.borderBeige}`}>
           <div className="text-center mb-8">
             <div className={`mx-auto w-16 h-16 ${themeConfig.icon.primary} mb-4`}>
               <Heart className="w-8 h-8 fill-current" />
@@ -63,7 +63,7 @@ export default function LoginPage() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label htmlFor="username" className={themeConfig.text.label}>
+              <label htmlFor="username" className={`block mb-1 ${themeConfig.text.label}`}>
                 Username
               </label>
               <input
@@ -72,13 +72,16 @@ export default function LoginPage() {
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 required
+                autoComplete="username"
+                autoCapitalize="none"
+                autoCorrect="off"
                 className={themeConfig.input}
                 placeholder="Enter your username"
               />
             </div>
 
             <div>
-              <label htmlFor="password" className={themeConfig.text.label}>
+              <label htmlFor="password" className={`block mb-1 ${themeConfig.text.label}`}>
                 Password
               </label>
               <input
@@ -87,6 +90,7 @@ export default function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
+                autoComplete="current-password"
                 className={themeConfig.input}
                 placeholder="Enter your password"
               />

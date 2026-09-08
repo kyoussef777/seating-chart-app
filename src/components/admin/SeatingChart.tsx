@@ -43,12 +43,17 @@ import {
   RotateCw,
   LucideIcon,
   FileSpreadsheet,
+  SlidersHorizontal,
+  ChevronDown,
 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { useTheme } from '@/hooks/useTheme';
 import { useDebounce } from '@/hooks/useDebounce';
+import { useIsTouch } from '@/hooks/useMediaQuery';
 import { useToast } from '@/contexts/ToastContext';
 import DraggableTable from './DraggableTable';
 import DraggableGuest from './DraggableGuest';
+import AssignGuestSheet from './AssignGuestSheet';
 
 interface Table {
   id: string;
@@ -154,11 +159,23 @@ export default function SeatingChart() {
   };
 
   const [loading, setLoading] = useState(true);
+  const isTouch = useIsTouch();
+  // Mobile-only chrome: the full toolbar and the guest column both collapse so
+  // the floor plan itself gets the screen.
+  const [showTools, setShowTools] = useState(false);
+  const [showGuestPanel, setShowGuestPanel] = useState(true);
+  const [seatingGuest, setSeatingGuest] = useState<Guest | null>(null);
   const [zoomLevel, setZoomLevel] = useState(0.7);
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
   const [isPanning, setIsPanning] = useState(false);
   const [lastPanPoint, setLastPanPoint] = useState({ x: 0, y: 0 });
   const chartRef = useRef<HTMLDivElement>(null);
+
+  // Touch gestures. HTML5 drag-and-drop never fires on touch, so the canvas
+  // drives panning, pinch-zoom and table dragging from raw touch events.
+  const pinchRef = useRef<{ distance: number; zoom: number; midX: number; midY: number } | null>(null);
+  const touchPanRef = useRef<{ x: number; y: number } | null>(null);
+  const touchTableRef = useRef<{ id: string; x: number; y: number; moved: boolean } | null>(null);
 
   // Mirrors of state so applyAssignment can stay identity-stable while still
   // reading current values (a guest may live in either collection).
@@ -810,6 +827,112 @@ export default function SeatingChart() {
     setRotatingItem(null);
   };
 
+
+  /* ---- Touch gestures ------------------------------------------------- */
+
+  const clampZoom = (value: number) => Math.max(0.3, Math.min(2, value));
+
+  /** A table was touched: drag it instead of panning the canvas. */
+  const handleTableTouchStart = useCallback((tableId: string, clientX: number, clientY: number) => {
+    touchPanRef.current = null;
+    touchTableRef.current = { id: tableId, x: clientX, y: clientY, moved: false };
+  }, []);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length === 2) {
+      const [a, b] = [e.touches[0], e.touches[1]];
+      touchPanRef.current = null;
+      touchTableRef.current = null;
+      pinchRef.current = {
+        distance: Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY) || 1,
+        zoom: zoomLevel,
+        midX: (a.clientX + b.clientX) / 2,
+        midY: (a.clientY + b.clientY) / 2,
+      };
+    } else if (e.touches.length === 1 && !touchTableRef.current) {
+      touchPanRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    // Pinch to zoom, anchored on the midpoint between the two fingers.
+    if (e.touches.length === 2 && pinchRef.current) {
+      const [a, b] = [e.touches[0], e.touches[1]];
+      const distance = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY) || 1;
+      const nextZoom = clampZoom((pinchRef.current.zoom * distance) / pinchRef.current.distance);
+      const rect = chartRef.current?.getBoundingClientRect();
+
+      if (rect) {
+        const midX = pinchRef.current.midX - rect.left;
+        const midY = pinchRef.current.midY - rect.top;
+        setPanOffset((prev) => ({
+          x: midX - ((midX - prev.x) / zoomLevel) * nextZoom,
+          y: midY - ((midY - prev.y) / zoomLevel) * nextZoom,
+        }));
+      }
+
+      setZoomLevel(nextZoom);
+      return;
+    }
+
+    if (e.touches.length !== 1) return;
+    const touch = e.touches[0];
+
+    // Dragging a table.
+    const dragging = touchTableRef.current;
+    if (dragging) {
+      const deltaX = (touch.clientX - dragging.x) / zoomLevel;
+      const deltaY = (touch.clientY - dragging.y) / zoomLevel;
+      touchTableRef.current = {
+        ...dragging,
+        x: touch.clientX,
+        y: touch.clientY,
+        moved: dragging.moved || Math.abs(deltaX) > 1 || Math.abs(deltaY) > 1,
+      };
+
+      setTables((prev) =>
+        prev.map((t) => {
+          if (t.id !== dragging.id) return t;
+          const { x, y } = clampToCanvas(
+            snapPosition(t.positionX + deltaX),
+            snapPosition(t.positionY + deltaY),
+            t.shape
+          );
+          return { ...t, positionX: x, positionY: y };
+        })
+      );
+      return;
+    }
+
+    // Otherwise pan the floor plan.
+    if (touchPanRef.current) {
+      setPanOffset((prev) => ({
+        x: prev.x + (touch.clientX - touchPanRef.current!.x),
+        y: prev.y + (touch.clientY - touchPanRef.current!.y),
+      }));
+      touchPanRef.current = { x: touch.clientX, y: touch.clientY };
+    }
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    const dragging = touchTableRef.current;
+    // Persist only a real move, so a tap (rename, guest list) is not a write.
+    if (dragging?.moved) {
+      const table = tablesRef.current.find((t) => t.id === dragging.id);
+      if (table) handleSetTablePosition(table.id, table.positionX, table.positionY);
+    }
+
+    if (e.touches.length === 0) {
+      touchTableRef.current = null;
+      touchPanRef.current = null;
+      pinchRef.current = null;
+    } else if (e.touches.length === 1) {
+      pinchRef.current = null;
+      touchTableRef.current = null;
+      touchPanRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    }
+  };
+
   const handleWheel = (e: React.WheelEvent) => {
     // Ctrl+Wheel or pinch gesture (ctrlKey is set on trackpad pinch) = zoom
     if (e.ctrlKey || e.metaKey) {
@@ -1239,38 +1362,44 @@ export default function SeatingChart() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className={`text-2xl ${themeConfig.text.heading}`}>Seating Chart</h2>
-        <div className="flex gap-2">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        {/* The sticky header already names the active tab on phones. */}
+        <h2 className={`hidden md:block text-xl sm:text-2xl ${themeConfig.text.heading}`}>Seating Chart</h2>
+        {/* Two columns on phones: four full-width buttons stacked would push
+            the floor plan off the first screen. */}
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:flex lg:gap-2">
           <button
             onClick={savePreferences}
-            className={`inline-flex items-center gap-2 ${themeConfig.button.secondary}`}
+            className={`inline-flex items-center justify-center gap-2 ${themeConfig.button.secondary}`}
             title="Save layout"
           >
             <Save className="w-4 h-4" />
-            Save Layout
+            <span className="sm:hidden">Save</span>
+            <span className="hidden sm:inline">Save Layout</span>
           </button>
           <button
             onClick={exportToExcel}
             disabled={tables.length === 0}
-            className={`inline-flex items-center gap-2 ${themeConfig.button.secondary} disabled:opacity-50 disabled:cursor-not-allowed`}
+            className={`inline-flex items-center justify-center gap-2 ${themeConfig.button.secondary} disabled:opacity-50 disabled:cursor-not-allowed`}
             title="Export seating chart to Excel"
           >
             <FileSpreadsheet className="w-4 h-4" />
-            Export to Excel
+            <span className="sm:hidden">Export</span>
+            <span className="hidden sm:inline">Export to Excel</span>
           </button>
           <button
             onClick={handleAutoArrange}
             disabled={tables.length === 0}
-            className={`inline-flex items-center gap-2 ${themeConfig.button.secondary} disabled:opacity-50 disabled:cursor-not-allowed`}
+            className={`inline-flex items-center justify-center gap-2 ${themeConfig.button.secondary} disabled:opacity-50 disabled:cursor-not-allowed`}
             title="Auto-arrange tables"
           >
             <Shuffle className="w-4 h-4" />
-            Auto Arrange
+            <span className="sm:hidden">Arrange</span>
+            <span className="hidden sm:inline">Auto Arrange</span>
           </button>
           <button
             onClick={() => setShowAddTable(true)}
-            className={`inline-flex items-center gap-2 ${themeConfig.button.primary}`}
+            className={`inline-flex items-center justify-center gap-2 ${themeConfig.button.primary}`}
           >
             <Plus className="w-4 h-4" />
             Add Table
@@ -1278,17 +1407,27 @@ export default function SeatingChart() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {/* Unassigned Guests */}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 lg:gap-6">
+        {/* Unassigned Guests. Collapsible on phones so the floor plan is not
+            pushed below a long list. */}
         <div className={`lg:col-span-1 ${themeConfig.card}`}>
-          <h3
-            className={`font-semibold mb-4 flex items-center gap-2 ${themeConfig.text.heading}`}
+          <button
+            type="button"
+            onClick={() => setShowGuestPanel((open) => !open)}
+            aria-expanded={showGuestPanel}
+            className={`flex w-full items-center justify-between gap-2 font-semibold ${themeConfig.text.heading} lg:cursor-default`}
           >
-            <Users className="w-5 h-5" />
-            Unassigned Guests ({unassignedGuests.length})
-          </h3>
+            <span className="flex items-center gap-2">
+              <Users className="w-5 h-5" />
+              Unassigned Guests ({unassignedGuests.length})
+            </span>
+            <ChevronDown
+              className={`h-4 w-4 text-stone-400 transition-transform lg:hidden ${showGuestPanel ? 'rotate-180' : ''}`}
+            />
+          </button>
 
-          <div className="mb-4">
+          <div className={`${showGuestPanel ? 'block' : 'hidden'} lg:block`}>
+          <div className="mb-4 mt-4">
             <div className="relative">
               <Search
                 className={`absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 ${themeConfig.icon.color.secondary}`}
@@ -1303,12 +1442,19 @@ export default function SeatingChart() {
             </div>
           </div>
 
-          <div className="space-y-2 max-h-96 overflow-y-auto">
+          {isTouch && (
+            <p className={`mb-2 text-xs ${themeConfig.text.muted}`}>
+              Tap a guest to seat them at a table.
+            </p>
+          )}
+
+          <div className="space-y-2 max-h-[45vh] lg:max-h-96 overflow-y-auto overscroll-contain">
             {filteredGuests.map((guest) => (
               <DraggableGuest
                 key={guest.id}
                 guest={guest}
                 onUnassign={() => handleUnassignGuest(guest.id)}
+                onSeat={() => setSeatingGuest(guest)}
               />
             ))}
             {filteredGuests.length === 0 && unassignedGuests.length > 0 && (
@@ -1320,13 +1466,14 @@ export default function SeatingChart() {
               <p className={`text-sm ${themeConfig.text.body}`}>All guests are assigned!</p>
             )}
           </div>
+          </div>
         </div>
 
         {/* Seating Chart Canvas */}
         <div className={`lg:col-span-3 ${themeConfig.card}`}>
           {/* Enhanced Toolbar */}
           <div className="space-y-3 mb-4">
-            {/* Zoom Controls */}
+            {/* Zoom Controls — always visible, even on phones. */}
             <div
               className={`flex items-center gap-2 p-2 rounded-lg ${themeConfig.theme.secondary[100]}`}
             >
@@ -1334,6 +1481,7 @@ export default function SeatingChart() {
                 onClick={handleZoomOut}
                 className={`flex items-center gap-1 px-3 py-1 rounded ${themeConfig.button.secondary}`}
                 title="Zoom Out"
+                aria-label="Zoom out"
               >
                 <ZoomOut className="w-4 h-4" />
               </button>
@@ -1346,6 +1494,7 @@ export default function SeatingChart() {
                 onClick={handleZoomIn}
                 className={`flex items-center gap-1 px-3 py-1 rounded ${themeConfig.button.secondary}`}
                 title="Zoom In"
+                aria-label="Zoom in"
               >
                 <ZoomIn className="w-4 h-4" />
               </button>
@@ -1353,17 +1502,30 @@ export default function SeatingChart() {
                 onClick={handleResetZoom}
                 className={`flex items-center gap-1 px-3 py-1 rounded ${themeConfig.button.secondary}`}
                 title="Reset Zoom & Pan"
+                aria-label="Reset zoom and pan"
               >
                 <RotateCcw className="w-4 h-4" />
               </button>
-              <div className={`flex items-center gap-1 text-sm ml-4 ${themeConfig.text.body}`}>
+
+              {/* The rest of the toolbar is a lot of controls for a phone, so
+                  it hides behind this toggle below `md`. */}
+              <button
+                onClick={() => setShowTools((open) => !open)}
+                aria-expanded={showTools}
+                className={`ml-auto flex items-center gap-1 px-3 py-1 rounded md:hidden ${showTools ? themeConfig.button.primary : themeConfig.button.secondary}`}
+              >
+                <SlidersHorizontal className="w-4 h-4" />
+                Tools
+              </button>
+
+              <div className={`hidden md:flex items-center gap-1 text-sm ml-4 ${themeConfig.text.body}`}>
                 <Move className="w-4 h-4" />
                 <span>Ctrl+scroll zoom, middle-click pan</span>
               </div>
             </div>
 
             {/* Grid & Feature Controls */}
-            <div className="flex items-center gap-2 flex-wrap">
+            <div className={`${showTools ? 'flex' : 'hidden'} md:flex items-center gap-2 flex-wrap`}>
               <button
                 onClick={() => setShowGrid(!showGrid)}
                 className={`flex items-center gap-1 px-3 py-1 rounded text-sm ${showGrid ? themeConfig.button.primary : themeConfig.button.secondary}`}
@@ -1383,14 +1545,17 @@ export default function SeatingChart() {
               <select
                 value={gridSize}
                 onChange={(e) => setGridSize(Number(e.target.value))}
-                className={`px-2 py-1 rounded text-sm ${themeConfig.input}`}
+                aria-label="Grid size"
+                /* `themeConfig.input` is w-full, which made this select claim a
+                   whole toolbar row on its own. */
+                className={cn(themeConfig.input, 'w-auto px-2 py-1 text-sm')}
               >
                 <option value={20}>20px Grid</option>
                 <option value={50}>50px Grid</option>
                 <option value={100}>100px Grid</option>
               </select>
 
-              <div className="w-px h-6 bg-stone-300 mx-1" />
+              <div className="hidden md:block w-px h-6 bg-stone-300 mx-1" />
 
               <button
                 onClick={handleAddLabel}
@@ -1459,8 +1624,9 @@ export default function SeatingChart() {
                 )}
               </div>
 
-              <div className="w-px h-6 bg-stone-300 mx-1" />
+              <div className="hidden md:block w-px h-6 bg-stone-300 mx-1" />
 
+              <div className="hidden md:flex items-center gap-2">
               <button
                 onClick={handleAlignLeft}
                 disabled={selectedItems.size < 2}
@@ -1493,17 +1659,20 @@ export default function SeatingChart() {
               >
                 <AlignVerticalSpaceAround className="w-4 h-4" />
               </button>
+              </div>
 
               <button
                 onClick={handleDeleteSelected}
                 disabled={selectedItems.size === 0}
                 className={`flex items-center gap-1 px-2 py-1 rounded text-sm ${themeConfig.button.danger} disabled:opacity-50`}
                 title="Delete Selected (Del)"
+                aria-label="Delete selected items"
               >
                 <Trash2 className="w-4 h-4" />
+                <span className="md:hidden">Delete</span>
               </button>
 
-              <div className="w-px h-6 bg-stone-300 mx-1" />
+              <div className="hidden md:block w-px h-6 bg-stone-300 mx-1" />
 
               <button
                 onClick={() => setShowMiniMap(!showMiniMap)}
@@ -1522,16 +1691,22 @@ export default function SeatingChart() {
               chartRef.current = el;
               drop(el);
             }}
-            className={`relative rounded-lg border-2 border-dashed overflow-hidden ${isPanning ? 'cursor-grabbing' : 'cursor-default'} bg-stone-200/60`}
+            className={`relative h-[min(62vh,760px)] min-h-[340px] md:h-[min(72vh,760px)] md:min-h-[480px] rounded-lg border-2 border-dashed overflow-hidden ${isPanning ? 'cursor-grabbing' : 'cursor-default'} bg-stone-200/60`}
             /* Fixed viewport onto the floor plan: the inner surface keeps its
                unscaled layout size, so without an explicit height the container
-               stretched to the full 1500px canvas and left dead space below. */
-            style={{ position: 'relative', height: 'min(72vh, 760px)', minHeight: '480px' }}
+               stretched to the full 1500px canvas and left dead space below.
+               `touch-action: none` hands one-finger drags and pinches to the
+               gesture handlers instead of scrolling the page. */
+            style={{ position: 'relative', touchAction: 'none' }}
             onMouseDown={handleMouseDown}
             onMouseMove={handleMouseMove}
             onMouseUp={handleMouseUp}
             onWheel={handleWheel}
             onMouseLeave={handleMouseUp}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+            onTouchCancel={handleTouchEnd}
           >
             <div
               ref={canvasRef}
@@ -1720,7 +1895,7 @@ export default function SeatingChart() {
                 <div
                   key={label.id}
                   onMouseDown={(e) => handleLabelMouseDown(label.id, e)}
-                  className={`absolute cursor-move font-bold transition-shadow ${themeConfig.text.heading} ${selectedItems.has(label.id) ? 'ring-4 ring-emerald-500 bg-white bg-opacity-80 rounded-lg px-3 py-1' : 'bg-white bg-opacity-60 rounded px-2'}`}
+                  className={`absolute cursor-move font-bold transition-shadow ${themeConfig.text.heading} ${selectedItems.has(label.id) ? 'ring-4 ring-emerald-500 bg-white/80 rounded-lg px-3 py-1' : 'bg-white/60 rounded px-2'}`}
                   style={{
                     left: label.x,
                     top: label.y,
@@ -1790,6 +1965,8 @@ export default function SeatingChart() {
                   onRotate={handleRotateTable}
                   onRename={handleRenameTable}
                   allTableNames={tables.map((t) => t.name)}
+                  onTouchDragStart={handleTableTouchStart}
+                  onSeatGuest={setSeatingGuest}
                 />
               ))}
 
@@ -1811,7 +1988,7 @@ export default function SeatingChart() {
 
             {/* Mini-map */}
             {showMiniMap && tables.length > 0 && (
-              <div className="absolute bottom-4 right-4 w-48 h-36 bg-white border-2 border-stone-400 rounded-lg shadow-lg overflow-hidden pointer-events-none">
+              <div className="absolute bottom-3 right-3 h-20 w-28 sm:bottom-4 sm:right-4 sm:h-36 sm:w-48 bg-white border-2 border-stone-400 rounded-lg shadow-lg overflow-hidden pointer-events-none">
                 <div className="relative w-full h-full bg-stone-100">
                   <div className="absolute inset-0 flex items-center justify-center text-xs text-stone-800 font-semibold">
                     Mini-map
@@ -1821,8 +1998,8 @@ export default function SeatingChart() {
                       key={table.id}
                       className="absolute bg-emerald-600 rounded-sm opacity-70"
                       style={{
-                        left: `${(table.positionX / 1200) * 100}%`,
-                        top: `${(table.positionY / 1000) * 100}%`,
+                        left: `${(table.positionX / CANVAS_WIDTH) * 100}%`,
+                        top: `${(table.positionY / CANVAS_HEIGHT) * 100}%`,
                         width: '10px',
                         height: '10px',
                       }}
@@ -1834,7 +2011,12 @@ export default function SeatingChart() {
           </div>
 
           {/* Helper Text */}
-          <div className="mt-3 text-xs text-stone-800 space-y-1">
+          <p className={`mt-3 text-xs md:hidden ${themeConfig.text.muted}`}>
+            Drag the floor plan to pan, pinch to zoom, and drag a table to move it.
+            Tap a table&rsquo;s name to rename it or its seat count to see who is
+            sitting there.
+          </p>
+          <div className="mt-3 hidden text-xs text-stone-800 space-y-1 md:block">
             <p>• <strong>Keyboard shortcuts:</strong> G (grid), S (snap), M (mini-map), Delete (remove selected), Esc (deselect)</p>
             <p>• <strong>Selection:</strong> Click items to select, Shift+Click for multi-select</p>
             <p>• <strong>Drag:</strong> Click and drag labels, shapes, and objects to reposition them</p>
@@ -1844,6 +2026,22 @@ export default function SeatingChart() {
           </div>
         </div>
       </div>
+
+      {seatingGuest && (
+        <AssignGuestSheet
+          guest={seatingGuest}
+          tables={tables}
+          onAssign={(tableId) => {
+            if (tableId) {
+              handleAssignGuest(seatingGuest.id, tableId);
+            } else {
+              handleUnassignGuest(seatingGuest.id);
+            }
+            setSeatingGuest(null);
+          }}
+          onClose={() => setSeatingGuest(null)}
+        />
+      )}
 
       {/* Add Table Modal */}
       {showAddTable && (
@@ -1901,14 +2099,14 @@ export default function SeatingChart() {
                 />
               </div>
 
-              <div className="flex gap-3 pt-4">
+              <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:gap-3 sm:pt-4">
                 <button type="submit" className={`flex-1 ${themeConfig.button.primary}`}>
                   Add Table
                 </button>
                 <button
                   type="button"
                   onClick={() => setShowAddTable(false)}
-                  className={themeConfig.button.secondary}
+                  className={`flex-1 sm:flex-none ${themeConfig.button.secondary}`}
                 >
                   Cancel
                 </button>

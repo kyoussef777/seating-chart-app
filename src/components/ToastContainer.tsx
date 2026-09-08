@@ -11,7 +11,7 @@ interface ToastContainerProps {
 export function ToastContainer({ toasts, onClose }: ToastContainerProps) {
   return (
     <div
-      className="fixed top-4 right-4 z-[9999] flex flex-col gap-2"
+      className="fixed top-4 left-4 right-4 z-[9999] flex flex-col gap-2 sm:left-auto sm:right-4"
       aria-live="polite"
       aria-atomic="true"
     >
