@@ -158,13 +158,32 @@ committed** — the existing database was baselined against `0000_*` (its hash i
 recorded in `drizzle.__drizzle_migrations`), so `db:migrate` is a no-op until a
 new migration is generated.
 
-**Deploying a schema change is two steps.** Vercel ships the code on merge;
-`db:migrate` is manual and easy to forget — skipping it once took the guest
-portal down with `column "template" does not exist`. Run it against production
-(`DATABASE_URL=<prod> npm run db:migrate`) as part of the same release. Settings
-reads go through `readEventSettingsRow()`, which falls back to the pre-migration
-columns so the portal degrades to template defaults instead of 500ing, but
-saving settings is blocked until the migration runs.
+**Migrations run themselves on deploy.** `npm run build` is
+`node scripts/migrate-on-deploy.mjs && next build`, and Vercel's build is the
+only hook that runs once per deployment with the database reachable, so schema
+and code ship together. Generate and commit the migration (above) and the deploy
+applies it — there is no manual release step.
+
+The script:
+- **skips** with exit 0 when `DATABASE_URL` is unset, so `next build` still works
+  on a machine or CI runner without secrets, and when `SKIP_DB_MIGRATE=1`, the
+  escape hatch for a deploy that must not touch the database
+- **fails the build** when a migration fails, rather than shipping code against a
+  schema that cannot answer it
+- runs `drizzle-kit migrate`, which is why `pg` is a devDependency: without it
+  drizzle-kit falls back to `@neondatabase/serverless` over websockets, which
+  only reaches hosted Neon, and the same command could not be tested against any
+  other Postgres
+
+Preview and Production share a `DATABASE_URL`, so a preview deploy migrates the
+same database. Migrations are recorded in `drizzle.__drizzle_migrations` and
+applied once, but a preview of an unmerged schema change reaches production data
+— use `SKIP_DB_MIGRATE=1` on that deploy if it matters.
+
+Belt and braces: settings reads go through `readEventSettingsRow()`, which falls
+back to the pre-migration columns so the portal degrades to template defaults
+rather than 500ing if a database is ever behind its code. Saving settings is
+blocked with a 503 until the migration runs.
 
 For schema changes:
 1. Modify `src/lib/schema.ts`
