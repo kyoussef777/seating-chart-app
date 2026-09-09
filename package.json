@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
-    "build": "next build --turbopack",
+    "build": "node scripts/migrate-on-deploy.mjs && next build --turbopack",
+    "build:no-migrate": "next build --turbopack",
     "start": "next start",
     "lint": "eslint",
     "test": "node --test src/**/*.test.ts",
@@ -42,6 +43,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "^15.5.23",
+    "pg": "^8.23.0",
     "tailwindcss": "^4",
     "typescript": "^5"
   }
