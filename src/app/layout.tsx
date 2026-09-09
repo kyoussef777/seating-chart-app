@@ -62,12 +62,15 @@ export const metadata: Metadata = {
       ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
       : 'http://localhost:3000'
   ),
-  title: "Mira's Bridal Shower",
-  description: "Find your table assignment for Mira's bridal shower",
+  // Event-specific title and description come from the settings row, applied by
+  // the home page's generateMetadata. These are the fallbacks for every other
+  // route (and for a home page rendered without a database).
+  title: 'Find Your Table',
+  description: 'Look up your table assignment for the celebration',
   // Icons come from src/app/icon.png + favicon.ico via Next's file convention.
   openGraph: {
-    title: "Mira's Bridal Shower",
-    description: "Find your table assignment for Mira's bridal shower",
+    title: 'Find Your Table',
+    description: 'Look up your table assignment for the celebration',
     images: ['/logo.png'],
   },
 };

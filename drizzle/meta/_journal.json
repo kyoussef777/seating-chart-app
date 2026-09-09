@@ -8,6 +8,13 @@
       "when": 1787545301821,
       "tag": "0000_faithful_shinobi_shaw",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1788916047183,
+      "tag": "0001_fuzzy_ravenous",
+      "breakpoints": true
     }
   ]
 }

@@ -3,17 +3,18 @@ import { requireAuth } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { eventSettings } from '@/lib/schema';
 import { eq } from 'drizzle-orm';
+import { defaultPortalSettings, normalizeSettingsUpdate } from '@/lib/event-settings';
 
 export async function GET() {
   try {
     const [settings] = await db.select().from(eventSettings).limit(1);
 
     if (!settings) {
-      // Create default settings if none exist
-      const [newSettings] = await db.insert(eventSettings).values({
-        eventName: 'Our Special Day',
-        homePageText: 'Welcome to our wedding! Please find your table below.',
-      }).returning();
+      // First run: seed the row from the default template's copy.
+      const [newSettings] = await db
+        .insert(eventSettings)
+        .values(defaultPortalSettings())
+        .returning();
 
       return NextResponse.json({ settings: newSettings });
     }
@@ -31,55 +32,26 @@ export async function GET() {
 export async function PUT(request: NextRequest) {
   try {
     await requireAuth();
-    const { eventName, homePageText, searchEnabled, addressCollectionEnabled } = await request.json();
 
-    if (
-      eventName === undefined &&
-      homePageText === undefined &&
-      searchEnabled === undefined &&
-      addressCollectionEnabled === undefined
-    ) {
-      return NextResponse.json(
-        { error: 'At least one field is required' },
-        { status: 400 }
-      );
+    // Validation lives in lib/event-settings so the admin form and this route
+    // cannot disagree about what a valid event looks like.
+    const parsed = normalizeSettingsUpdate(await request.json());
+    if (!parsed.ok) {
+      return NextResponse.json({ error: parsed.error }, { status: 400 });
     }
 
-    // Get existing settings
     const [existingSettings] = await db.select().from(eventSettings).limit(1);
 
-    let updatedSettings;
-
-    if (existingSettings) {
-      // Update existing settings
-      const updateData: {
-        eventName?: string;
-        homePageText?: string;
-        searchEnabled?: boolean;
-        addressCollectionEnabled?: boolean;
-        updatedAt: Date;
-      } = { updatedAt: new Date() };
-      if (eventName !== undefined) updateData.eventName = eventName;
-      if (homePageText !== undefined) updateData.homePageText = homePageText;
-      if (searchEnabled !== undefined) updateData.searchEnabled = searchEnabled;
-      if (addressCollectionEnabled !== undefined)
-        updateData.addressCollectionEnabled = addressCollectionEnabled;
-
-      [updatedSettings] = await db
-        .update(eventSettings)
-        .set(updateData)
-        .where(eq(eventSettings.id, existingSettings.id))
-        .returning();
-    } else {
-      // Create new settings
-      [updatedSettings] = await db.insert(eventSettings).values({
-        eventName: eventName || 'Our Special Day',
-        homePageText: homePageText || 'Welcome to our wedding! Please find your table below.',
-        searchEnabled: searchEnabled !== undefined ? searchEnabled : true,
-        addressCollectionEnabled:
-          addressCollectionEnabled !== undefined ? addressCollectionEnabled : true,
-      }).returning();
-    }
+    const [updatedSettings] = existingSettings
+      ? await db
+          .update(eventSettings)
+          .set({ ...parsed.values, updatedAt: new Date() })
+          .where(eq(eventSettings.id, existingSettings.id))
+          .returning()
+      : await db
+          .insert(eventSettings)
+          .values({ ...defaultPortalSettings(), ...parsed.values })
+          .returning();
 
     return NextResponse.json({ settings: updatedSettings });
   } catch (error) {

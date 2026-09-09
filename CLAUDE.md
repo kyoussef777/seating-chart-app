@@ -43,7 +43,8 @@ npm run create-admin   # Create admin user interactively
 ### Database Schema
 The application uses Drizzle ORM with these tables:
 - `users` - Admin authentication
-- `eventSettings` - Event configuration (name, homepage text, search toggle, address-collection toggle)
+- `eventSettings` - Event configuration (template, name, kicker, venue, date,
+  homepage text, search-closed message, search toggle, address-collection toggle)
 - `tables` - Seating arrangements with position coordinates
 - `guests` - Guest information, party size, optional table assignment
 - `labels`, `shapes`, `referenceObjects` - Floor-plan decoration layer
@@ -53,12 +54,14 @@ Key relationship: `guests.tableId` → `tables.id` (nullable, cascades to null o
 ### Application Structure
 
 **Dual Interface Design:**
-- **Guest Portal** (`/`): Autocomplete search, table lookup, optional address collection
+- **Guest Portal** (`/`): Autocomplete search, table lookup, optional address
+  collection, rendered by one of three event templates
 - **Admin Dashboard** (`/admin`): Seating chart, Roster, guest management, CSV import
 
 **Admin tabs:** Seating Chart (spatial floor plan), Roster (who is sitting with
 whom — drag guests between tables and the unassigned list), Guest List, Event
-Settings, User Management. Both seating views share `src/lib/seating.ts`, which
+Settings (template picker, event copy, guest-facing toggles, live preview),
+User Management. Both seating views share `src/lib/seating.ts`, which
 owns capacity maths, canvas bounds and assignment persistence.
 
 **API Routes:**
@@ -85,10 +88,38 @@ owns capacity maths, canvas bounds and assignment persistence.
 - Pre-built component styles for consistency
 - Alternative themes available (Rose, Blue, Emerald)
 
-**Guest Search (`/src/app/page.tsx`):**
-- Real-time autocomplete with keyboard navigation
-- Shows guest names with table assignments
-- Handles assigned/unassigned visual indicators
+**Event Templates (`/src/lib/templates.ts`):**
+- One registry entry per event type: `bridal-shower`, `wedding`, `engagement`.
+  Each carries a palette, border radii, font stack and default copy.
+- The admin picks the template in Event Settings; it is stored on
+  `eventSettings.template` and resolved with `resolveTemplate()`, which falls
+  back to the default for an unknown or missing id.
+- Adding an event type = one registry entry + one scenery component under
+  `src/components/guest/templates/`, wired into `GuestPortal`. Nothing else
+  changes.
+
+**Guest Portal structure:**
+- `src/app/page.tsx` — server component. Reads the settings row directly (so the
+  portal renders with the right copy, and `generateMetadata` can title the page
+  after the event) and passes it to the client. A database failure yields `null`
+  and the client falls back to fetching `/api/settings`.
+- `src/hooks/useGuestPortal.ts` — all portal behaviour: settings, guest/table
+  data, autocomplete, table lookup, address capture.
+- `src/components/guest/PortalPanels.tsx` — header, search, result and address
+  panels, styled from the template's palette. Shared by every template.
+- `src/components/guest/templates/*` — scenery and frame only.
+
+**Guest Search (`/src/lib/guest-search.ts`):**
+- Real-time autocomplete with keyboard navigation, scored by match quality
+- Shows guest names with table assignments and party sizes
+- Capped at 10 suggestions; unit tested in `guest-search.test.ts`
+
+**Event settings validation (`/src/lib/event-settings.ts`):**
+- `normalizeSettingsUpdate()` validates and trims a settings payload; the API
+  route and the admin form both use it, so they cannot disagree.
+- `toPortalSettings()` turns a (possibly missing or older) row into the settings
+  the portal renders. A blank optional field means "hide that line" — it is not
+  refilled from the template.
 
 ### Authentication Flow
 
