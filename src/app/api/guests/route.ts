@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth, getSession } from '@/lib/auth';
 import { authorizeGuestUpdate } from '@/lib/guest-update-policy';
 import { db } from '@/lib/db';
-import { guests, tables, eventSettings } from '@/lib/schema';
+import { guests, tables } from '@/lib/schema';
+import { readEventSettingsRow } from '@/lib/event-settings-db';
 import { eq, ilike } from 'drizzle-orm';
 
 export async function GET(request: NextRequest) {
@@ -16,8 +17,8 @@ export async function GET(request: NextRequest) {
 
     // If not authenticated, check if search is enabled
     if (!isAuthenticated) {
-      const [settings] = await db.select().from(eventSettings).limit(1);
-      if (settings && !settings.searchEnabled) {
+      const settings = await readEventSettingsRow();
+      if (settings && settings.searchEnabled === false) {
         return NextResponse.json(
           { error: 'Guest search is currently disabled' },
           { status: 403 }
@@ -131,8 +132,8 @@ export async function PUT(request: NextRequest) {
 
     let addressCollectionEnabled = true;
     if (!isAdmin) {
-      const [settings] = await db.select().from(eventSettings).limit(1);
-      addressCollectionEnabled = settings ? settings.addressCollectionEnabled : true;
+      const settings = await readEventSettingsRow();
+      addressCollectionEnabled = settings ? settings.addressCollectionEnabled !== false : true;
     }
 
     const decision = authorizeGuestUpdate({

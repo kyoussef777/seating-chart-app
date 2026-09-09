@@ -158,6 +158,14 @@ committed** — the existing database was baselined against `0000_*` (its hash i
 recorded in `drizzle.__drizzle_migrations`), so `db:migrate` is a no-op until a
 new migration is generated.
 
+**Deploying a schema change is two steps.** Vercel ships the code on merge;
+`db:migrate` is manual and easy to forget — skipping it once took the guest
+portal down with `column "template" does not exist`. Run it against production
+(`DATABASE_URL=<prod> npm run db:migrate`) as part of the same release. Settings
+reads go through `readEventSettingsRow()`, which falls back to the pre-migration
+columns so the portal degrades to template defaults instead of 500ing, but
+saving settings is blocked until the migration runs.
+
 For schema changes:
 1. Modify `src/lib/schema.ts`
 2. `npm run db:generate` — writes a new incremental migration to `/drizzle`

@@ -1,6 +1,5 @@
 import type { Metadata } from 'next';
-import { db } from '@/lib/db';
-import { eventSettings } from '@/lib/schema';
+import { readEventSettingsRow } from '@/lib/event-settings-db';
 import { toPortalSettings, type PortalSettings } from '@/lib/event-settings';
 import GuestPortal from '@/components/guest/GuestPortal';
 
@@ -15,8 +14,7 @@ export const dynamic = 'force-dynamic';
  */
 async function loadSettings(): Promise<PortalSettings | null> {
   try {
-    const [row] = await db.select().from(eventSettings).limit(1);
-    return toPortalSettings(row ?? null);
+    return toPortalSettings(await readEventSettingsRow());
   } catch (error) {
     console.error('Home page settings load failed:', error);
     return null;
