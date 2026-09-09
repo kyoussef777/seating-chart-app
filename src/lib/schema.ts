@@ -7,10 +7,26 @@ export const users = pgTable('users', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
+// The column defaults double as the backfill for the existing production row,
+// so the fields added with the template system default to the copy the live
+// bridal-shower page previously hard-coded. New events overwrite them from the
+// chosen template's defaults (see lib/event-settings.ts).
 export const eventSettings = pgTable('event_settings', {
   id: uuid('id').defaultRandom().primaryKey(),
+  /** Which guest-portal template to render: see lib/templates.ts. */
+  template: varchar('template', { length: 32 }).notNull().default('bridal-shower'),
   eventName: text('event_name').notNull().default("Mira & Kamal's Engagement"),
+  /** Small-caps line above the event name. Empty hides it. */
+  eventKicker: text('event_kicker').notNull().default('Bridal Shower'),
   homePageText: text('home_page_text').notNull().default('Welcome to our engagement! Please find your table below.'),
+  /** Venue line under the event name. Empty hides it. */
+  venueName: text('venue_name').notNull().default("Angelina's Restaurant, Staten Island"),
+  /** Date line, shown beside the venue. Empty hides it. */
+  eventDate: text('event_date').notNull().default('September 26'),
+  /** Shown in place of the search box while search is switched off. */
+  searchClosedMessage: text('search_closed_message')
+    .notNull()
+    .default('Seating will be revealed on the day of the celebration.'),
   searchEnabled: boolean('search_enabled').notNull().default(true),
   addressCollectionEnabled: boolean('address_collection_enabled').notNull().default(true),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
