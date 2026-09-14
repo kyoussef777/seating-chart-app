@@ -63,8 +63,8 @@ export function PortalHeader({ template, portal }: PanelProps) {
   const { palette, fonts } = template;
   const { settings } = portal;
 
-  // The last word of the name drops to an indented second line, which is what
-  // gives the script faces their hand-lettered balance.
+  // The last word of the name drops to a second line so long names keep a
+  // readable display size. Both lines stay centred on the card.
   const words = settings.eventName.trim().split(/\s+/);
   const tail = words.length > 1 ? words[words.length - 1] : '';
   const head = tail ? words.slice(0, -1).join(' ') : settings.eventName;
@@ -86,7 +86,7 @@ export function PortalHeader({ template, portal }: PanelProps) {
 
       <div className="mb-4 flex justify-center sm:mb-5">
         <h1
-          className="m-0 inline-block p-0 text-left leading-[1.2]"
+          className="m-0 inline-block p-0 text-center leading-[1.2]"
           style={{
             fontFamily: fonts.display,
             color: palette.heading,
@@ -96,7 +96,7 @@ export function PortalHeader({ template, portal }: PanelProps) {
           }}
         >
           <span className="block whitespace-nowrap">{head}</span>
-          {tail && <span className="block pl-[1.2em]">{tail}</span>}
+          {tail && <span className="block whitespace-nowrap">{tail}</span>}
         </h1>
       </div>
 

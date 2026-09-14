@@ -77,10 +77,18 @@ owns capacity maths, canvas bounds and assignment persistence.
 ### Key Features
 
 **Seating Chart (`/src/components/admin/SeatingChart.tsx`):**
-- React DnD implementation with zoom/pan controls
-- Real-time table positioning with pixel accuracy
+- Tables, labels, shapes and reference objects all move through one pointer
+  drag path (mouse, pen and touch), so positions track the cursor live at any
+  zoom. Only tables persist on release; the rest autosave (below).
+- Drag empty canvas to pan, Ctrl/⌘+wheel or pinch to zoom around the cursor,
+  and a fit button frames the plan. Transform-based zoom, 20%–300%.
+- The edit zone (floor-plan size) is configurable in px and can be locked, so a
+  stray drag cannot move anything. Both live in localStorage preferences with
+  grid/snap/mini-map.
+- Layout objects autosave to the database ~800ms after any change. The ids come
+  back as UUIDs, so anything keyed off the `label-`/`shape-`/`ref-` prefixes
+  breaks for saved items — match against the collections instead.
 - Visual capacity management and guest assignments
-- Transform-based zoom (30%-200%) with pan offset handling
 
 **Theme System (`/src/lib/theme.ts` + `/src/hooks/useTheme.ts`):**
 - Centralized theme configuration for easy color scheme changes
@@ -108,6 +116,11 @@ owns capacity maths, canvas bounds and assignment persistence.
 - `src/components/guest/PortalPanels.tsx` — header, search, result and address
   panels, styled from the template's palette. Shared by every template.
 - `src/components/guest/templates/*` — scenery and frame only.
+
+**Guest list sorting (`/src/lib/guest-sort.ts`):**
+- `queryGuests()` filters (search, seated/unassigned/missing phone or address,
+  table) then sorts (first name, last name, table, party size). Pure and unit
+  tested; the admin Guest List derives its rows from it with `useMemo`.
 
 **Guest Search (`/src/lib/guest-search.ts`):**
 - Real-time autocomplete with keyboard navigation, scored by match quality
@@ -145,11 +158,10 @@ Upload via admin interface automatically maps and validates data.
 
 ### Drag & Drop Implementation
 
-Uses React DnD with HTML5Backend:
-- Tables are draggable with position persistence
-- Drop zones account for zoom/pan transforms
-- Guest-to-table assignments via drag operations
-- Visual feedback for capacity limits
+React DnD (HTML5Backend) is now only used for **guests**: dragging a guest onto
+a table, with capacity refused up front via `canSeat()`. Everything positional
+on the canvas uses pointer events instead — HTML5 drag gives a ghost image, no
+touch support and only a final drop position.
 
 ### Database Migrations
 

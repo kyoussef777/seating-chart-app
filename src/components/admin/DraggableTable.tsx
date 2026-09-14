@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { useDrag, useDrop } from 'react-dnd';
+import { useDrop } from 'react-dnd';
 import { Trash2, Users, X, RotateCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/hooks/useTheme';
@@ -43,9 +43,12 @@ interface DraggableTableProps {
   onRotate: (tableId: string, rotation: number) => void;
   onRename: (tableId: string, newName: string) => void;
   allTableNames: string[];
-  /** Touch screens get no HTML5 drag events; the canvas moves the table from
-   *  raw touch events instead. */
-  onTouchDragStart?: (tableId: string, clientX: number, clientY: number) => void;
+  /** Pointer events drive the move (mouse, pen and touch alike); the canvas
+   *  owns the gesture so it can apply zoom, snapping and bounds. */
+  onDragStart: (tableId: string, e: React.PointerEvent) => void;
+  isDragging?: boolean;
+  isSelected?: boolean;
+  locked?: boolean;
   onSeatGuest?: (guest: Guest) => void;
 }
 
@@ -57,7 +60,10 @@ function DraggableTable({
   onRotate,
   onRename,
   allTableNames,
-  onTouchDragStart,
+  onDragStart,
+  isDragging = false,
+  isSelected = false,
+  locked = false,
   onSeatGuest,
 }: DraggableTableProps) {
   const themeConfig = useTheme();
@@ -140,17 +146,6 @@ function DraggableTable({
     }
   };
 
-  const [{ isDragging }, drag] = useDrag(() => ({
-    type: 'table',
-    item: () => {
-      return { id: table.id, type: 'table' };
-    },
-    collect: (monitor) => ({
-      isDragging: monitor.isDragging(),
-    }),
-    canDrag: true,
-  }));
-
   // Refuse an over-capacity or same-table drop up front, rather than
   // accepting it and rejecting with an error toast afterwards.
   const [{ isOver, canDropHere }, drop] = useDrop(
@@ -169,8 +164,16 @@ function DraggableTable({
   );
 
   const attachRef = (el: HTMLDivElement | null) => {
-    drag(el);
     drop(el);
+  };
+
+  const handlePointerDown = (e: React.PointerEvent) => {
+    // Always claim the press: otherwise it reaches the canvas, which reads a
+    // press on empty space as "start panning".
+    e.stopPropagation();
+    // Controls, the rename field and the guest popup keep their own taps.
+    if ((e.target as HTMLElement).closest('button, input, [data-no-drag]')) return;
+    onDragStart(table.id, e);
   };
 
   const tableStyle = {
@@ -179,8 +182,11 @@ function DraggableTable({
     top: `${table.positionY}px`,
     width: `${dimensions.width}px`,
     height: `${dimensions.height}px`,
-    opacity: isDragging ? 0.5 : 1,
-    cursor: 'move',
+    cursor: locked ? 'default' : isDragging ? 'grabbing' : 'grab',
+    // No transition while dragging: the table must track the pointer exactly.
+    transition: isDragging ? 'none' : 'box-shadow 150ms ease-out',
+    zIndex: isDragging ? 30 : undefined,
+    willChange: isDragging ? 'left, top' : undefined,
     transform: `rotate(${table.rotation || 0}deg)`,
     transformOrigin: 'center',
   };
@@ -210,24 +216,17 @@ function DraggableTable({
     return null;
   };
 
-  const handleTouchStart = (e: React.TouchEvent) => {
-    if (!onTouchDragStart || e.touches.length !== 1) return;
-    // Let the controls, the rename field and the guest popup handle their own
-    // taps rather than starting a drag.
-    if ((e.target as HTMLElement).closest('button, input, [data-no-drag]')) return;
-    onTouchDragStart(table.id, e.touches[0].clientX, e.touches[0].clientY);
-  };
-
   return (
     <div
       ref={attachRef}
-      onTouchStart={handleTouchStart}
+      onPointerDown={handlePointerDown}
       className={cn(
         themeConfig.table.default,
-        'p-3 relative transition-all duration-200 flex flex-col items-center justify-center',
+        'p-3 relative flex flex-col items-center justify-center select-none touch-none',
         isOver && canDropHere ? themeConfig.table.dropTarget : '',
         isOver && !canDropHere ? themeConfig.table.full : '',
-        isDragging ? themeConfig.table.dragging : 'z-0'
+        isDragging ? themeConfig.table.dragging : 'z-0',
+        isSelected ? 'ring-4 ring-emerald-500' : ''
       )}
       style={{
         ...tableStyle,
@@ -437,5 +436,11 @@ export default React.memo(DraggableTable, (prevProps, nextProps) => {
     });
 
   // Return true if nothing changed (skip re-render)
-  return !tableChanged && !guestsChanged;
+  return (
+    !tableChanged &&
+    !guestsChanged &&
+    prevProps.isDragging === nextProps.isDragging &&
+    prevProps.isSelected === nextProps.isSelected &&
+    prevProps.locked === nextProps.locked
+  );
 });
