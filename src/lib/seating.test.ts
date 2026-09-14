@@ -4,6 +4,7 @@ import {
   CANVAS_HEIGHT,
   CANVAS_WIDTH,
   canSeat,
+  clampBox,
   clampToCanvas,
   groupGuests,
   seatsAvailable,
@@ -82,6 +83,20 @@ test('clampToCanvas keeps a table fully inside the floor plan', () => {
   assert.equal(far.y, CANVAS_HEIGHT - 140);
   const neg = clampToCanvas(-500, -500, 'round');
   assert.deepEqual(neg, { x: 0, y: 0 });
+});
+
+test('clampToCanvas honours a resized edit zone', () => {
+  const bounds = { width: 800, height: 600 };
+  const far = clampToCanvas(99999, 99999, 'round', bounds);
+  assert.deepEqual(far, { x: 800 - 140, y: 600 - 140 });
+});
+
+test('clampBox keeps any object inside the floor plan', () => {
+  const bounds = { width: 1000, height: 500 };
+  assert.deepEqual(clampBox(950, 480, 200, 200, bounds), { x: 800, y: 300 });
+  assert.deepEqual(clampBox(-20, -20, 200, 200, bounds), { x: 0, y: 0 });
+  // An object bigger than the plan pins to the origin rather than going negative.
+  assert.deepEqual(clampBox(100, 100, 2000, 2000, bounds), { x: 0, y: 0 });
 });
 
 test('groupGuests splits seated from unassigned', () => {

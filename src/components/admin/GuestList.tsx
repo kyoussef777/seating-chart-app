@@ -1,9 +1,16 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
-import { Upload, Plus, Search, Edit, Trash2, User, Phone, MapPin, Users } from 'lucide-react';
+import { useState, useEffect, useMemo, useRef } from 'react';
+import { Upload, Plus, Search, Edit, Trash2, User, Phone, MapPin, Users, ArrowUpDown, Filter } from 'lucide-react';
 import { useTheme } from '@/hooks/useTheme';
 import { useToast } from '@/contexts/ToastContext';
+import {
+  GUEST_SORTS,
+  GUEST_STATUSES,
+  queryGuests,
+  type GuestSort,
+  type GuestStatus,
+} from '@/lib/guest-sort';
 
 interface Guest {
   id: string;
@@ -24,8 +31,10 @@ export default function GuestList() {
   const toast = useToast();
   const [guests, setGuests] = useState<Guest[]>([]);
   const [tables, setTables] = useState<Table[]>([]);
-  const [filteredGuests, setFilteredGuests] = useState<Guest[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [sort, setSort] = useState<GuestSort>('first-name');
+  const [status, setStatus] = useState<GuestStatus>('all');
+  const [tableFilter, setTableFilter] = useState('');
   const [showAddGuest, setShowAddGuest] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [editingGuest, setEditingGuest] = useState<Guest | null>(null);
@@ -62,19 +71,20 @@ export default function GuestList() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showBulkActions]);
 
-  useEffect(() => {
-    if (searchTerm.trim()) {
-      setFilteredGuests(
-        guests.filter(guest =>
-          guest.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          (guest.phoneNumber && guest.phoneNumber.includes(searchTerm)) ||
-          (guest.address && guest.address.toLowerCase().includes(searchTerm.toLowerCase()))
-        )
-      );
-    } else {
-      setFilteredGuests(guests);
-    }
-  }, [guests, searchTerm]);
+  // Derived, not stored: one source of truth for what the list shows.
+  const filteredGuests = useMemo(
+    () =>
+      queryGuests(guests, {
+        search: searchTerm,
+        status,
+        tableId: tableFilter,
+        sort,
+        tableName: (tableId) => (tableId ? tables.find((t) => t.id === tableId)?.name ?? '' : ''),
+      }),
+    [guests, searchTerm, status, tableFilter, sort, tables]
+  );
+
+  const filtersActive = searchTerm.trim() !== '' || status !== 'all' || tableFilter !== '';
 
   const fetchGuests = async () => {
     try {
@@ -330,8 +340,8 @@ export default function GuestList() {
         </div>
       </div>
 
-      {/* Search */}
-      <div className={themeConfig.card}>
+      {/* Search, filters and sort */}
+      <div className={`${themeConfig.card} space-y-3`}>
         <div className="relative">
           <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 ${themeConfig.icon.color.secondary}`} />
           <input
@@ -342,6 +352,73 @@ export default function GuestList() {
             className={`${themeConfig.input} pl-10 pr-4`}
           />
         </div>
+
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+          <label className="flex items-center gap-2 text-sm">
+            <Filter className={`w-4 h-4 flex-shrink-0 ${themeConfig.icon.color.secondary}`} />
+            <span className="sr-only">Show</span>
+            <select
+              value={status}
+              onChange={(e) => setStatus(e.target.value as GuestStatus)}
+              aria-label="Filter guests"
+              className={`${themeConfig.input} py-2 text-sm`}
+            >
+              {GUEST_STATUSES.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="flex items-center gap-2 text-sm">
+            <Users className={`w-4 h-4 flex-shrink-0 ${themeConfig.icon.color.secondary}`} />
+            <span className="sr-only">Table</span>
+            <select
+              value={tableFilter}
+              onChange={(e) => setTableFilter(e.target.value)}
+              aria-label="Filter by table"
+              className={`${themeConfig.input} py-2 text-sm`}
+            >
+              <option value="">All tables</option>
+              {tables.map((table) => (
+                <option key={table.id} value={table.id}>
+                  {table.name}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="flex items-center gap-2 text-sm">
+            <ArrowUpDown className={`w-4 h-4 flex-shrink-0 ${themeConfig.icon.color.secondary}`} />
+            <span className="sr-only">Sort by</span>
+            <select
+              value={sort}
+              onChange={(e) => setSort(e.target.value as GuestSort)}
+              aria-label="Sort guests"
+              className={`${themeConfig.input} py-2 text-sm`}
+            >
+              {GUEST_SORTS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+
+        {filtersActive && (
+          <button
+            onClick={() => {
+              setSearchTerm('');
+              setStatus('all');
+              setTableFilter('');
+            }}
+            className={`${themeConfig.button.tertiary} text-sm`}
+          >
+            Clear filters
+          </button>
+        )}
       </div>
 
       {/* Bulk Actions Bar */}
@@ -505,7 +582,7 @@ export default function GuestList() {
           ))}
           {filteredGuests.length === 0 && (
             <div className={`px-6 py-12 text-center ${themeConfig.text.muted}`}>
-              {searchTerm ? 'No guests found matching your search.' : 'No guests added yet.'}
+              {filtersActive ? 'No guests match these filters.' : 'No guests added yet.'}
             </div>
           )}
         </div>

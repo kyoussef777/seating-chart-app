@@ -73,13 +73,40 @@ export function canSeat(table: Table, item: GuestDragItem): boolean {
   return seatsAvailable(table, item.id) >= (item.partySize || 1);
 }
 
-/** Keep a table fully inside the floor plan. */
-export function clampToCanvas(x: number, y: number, shape: string) {
-  const { width, height } = getTableDimensions(shape);
+/** Floor-plan size limits for the configurable edit zone. */
+export const CANVAS_MIN = 400;
+export const CANVAS_MAX = 6000;
+
+export interface CanvasSize {
+  width: number;
+  height: number;
+}
+
+export const DEFAULT_CANVAS: CanvasSize = { width: CANVAS_WIDTH, height: CANVAS_HEIGHT };
+
+/** Keep an arbitrary box fully inside the floor plan. */
+export function clampBox(
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  bounds: CanvasSize = DEFAULT_CANVAS
+) {
   return {
-    x: Math.min(Math.max(0, x), CANVAS_WIDTH - width),
-    y: Math.min(Math.max(0, y), CANVAS_HEIGHT - height),
+    x: Math.min(Math.max(0, x), Math.max(0, bounds.width - width)),
+    y: Math.min(Math.max(0, y), Math.max(0, bounds.height - height)),
   };
+}
+
+/** Keep a table fully inside the floor plan. */
+export function clampToCanvas(
+  x: number,
+  y: number,
+  shape: string,
+  bounds: CanvasSize = DEFAULT_CANVAS
+) {
+  const { width, height } = getTableDimensions(shape);
+  return clampBox(x, y, width, height, bounds);
 }
 
 /** Split a flat guest list onto its tables. Single source of truth for the
