@@ -196,6 +196,28 @@ gesture works against that rather than against four different record shapes.
   panels, styled from the template's palette. Shared by every template.
 - `src/components/guest/templates/*` — scenery and frame only.
 
+**Roster (`/src/components/admin/RosterView.tsx` + `/src/lib/roster.ts`):**
+- Moving somebody never requires a drag. Every guest row carries a move button
+  that opens `MoveGuestsDialog` — search, arrow keys, Enter. With two dozen
+  tables the roster is three screens tall, so dragging a card to a target that
+  is rarely on screen at the same time was the whole problem; worse, the
+  tap-to-seat path was gated on `useIsTouch()`, so a desktop had no alternative
+  at all.
+- The picker lists tables that fit the group first, snuggest fit first, and
+  still shows the ones that do not fit, greyed out with their free count, so
+  "why isn't Table 6 here?" never comes up. "Remove from table" sits last in
+  both the visual and keyboard order: it used to be row 0, so a quick
+  type-and-Enter unseated the guest instead of moving them. When nothing fits,
+  nothing is highlighted and Enter does nothing.
+- Guests can be ticked individually or a whole table at once, then moved or
+  unseated together. `planBulkMove()` packs smallest parties first and reports
+  who did not fit rather than half-failing silently.
+- `lib/roster.ts` is pure and unit tested: natural table ordering (so "Table 2"
+  precedes "Table 10" — a plain locale compare is what made a long roster hard
+  to scan), search that *narrows* cards rather than only tinting them,
+  has-room/full/empty filters, and the seat maths that discounts the guests
+  being moved from their own target.
+
 **Guest list sorting (`/src/lib/guest-sort.ts`):**
 - `queryGuests()` filters (search, seated/unassigned/missing phone or address,
   table) then sorts (first name, last name, table, party size). Pure and unit

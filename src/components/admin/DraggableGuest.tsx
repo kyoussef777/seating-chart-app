@@ -2,28 +2,30 @@
 
 import React from 'react';
 import { useDrag } from 'react-dnd';
-import { User, X, Users, ChevronRight } from 'lucide-react';
+import { ArrowRightLeft, User, Users, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/hooks/useTheme';
-import { useIsTouch } from '@/hooks/useMediaQuery';
-import type { GuestDragItem } from '@/lib/seating';
-
-interface Guest {
-  id: string;
-  name: string;
-  phoneNumber: string | null;
-  address: string | null;
-  partySize: number;
-  tableId: string | null;
-}
+import type { Guest, GuestDragItem } from '@/lib/seating';
 
 interface DraggableGuestProps {
   guest: Guest;
   onUnassign?: () => void;
   showUnassign?: boolean;
-  /** Opens the tap-to-seat sheet. Touch screens never fire HTML5 drag
-   *  events, so this is the only way to move a guest there. */
+  /**
+   * Opens the move picker. Offered on every device, not just touch: dragging a
+   * guest across a roster of two dozen tables means hauling their card over
+   * several screens of scroll to a target that is rarely visible at the same
+   * time, and on a desktop this used to be the only way.
+   */
   onSeat?: () => void;
+  /** Multi-select, for moving a family in one go. */
+  selectable?: boolean;
+  selected?: boolean;
+  onToggleSelect?: () => void;
+  /** Extra context, e.g. which table they are at in a search result. */
+  meta?: string;
+  /** Tighter rows, for scanning a long roster. */
+  compact?: boolean;
 }
 
 function DraggableGuest({
@@ -31,10 +33,13 @@ function DraggableGuest({
   onUnassign,
   showUnassign = false,
   onSeat,
+  selectable = false,
+  selected = false,
+  onToggleSelect,
+  meta,
+  compact = false,
 }: DraggableGuestProps) {
   const themeConfig = useTheme();
-  const isTouch = useIsTouch();
-  const tapToSeat = isTouch && Boolean(onSeat);
   // Carry the origin table + party size so drop targets can check capacity
   // without looking the guest up in state that may not hold them.
   const [{ isDragging }, drag] = useDrag(
@@ -59,49 +64,84 @@ function DraggableGuest({
       ref={drag as unknown as React.LegacyRef<HTMLDivElement>}
       className={cn(
         themeConfig.listItem.draggable,
+        compact ? 'p-1.5' : 'p-3',
         isDragging ? 'opacity-50' : 'opacity-100',
-        tapToSeat && 'cursor-pointer active:bg-stone-200'
+        selected && 'bg-emerald-50 ring-2 ring-emerald-500'
       )}
     >
       <div className="flex items-center justify-between gap-1">
+        {selectable && (
+          <input
+            type="checkbox"
+            checked={selected}
+            onChange={(e) => {
+              e.stopPropagation();
+              onToggleSelect?.();
+            }}
+            onClick={(e) => e.stopPropagation()}
+            aria-label={`Select ${guest.name}`}
+            className="h-4 w-4 flex-shrink-0 cursor-pointer accent-emerald-600"
+          />
+        )}
+
         <div
-          className="flex items-center gap-2 min-w-0 flex-1"
-          onClick={tapToSeat ? onSeat : undefined}
-          role={tapToSeat ? 'button' : undefined}
-          tabIndex={tapToSeat ? 0 : undefined}
-          aria-label={tapToSeat ? `Seat ${guest.name}` : undefined}
+          className="flex min-w-0 flex-1 items-center gap-2"
+          onClick={selectable ? onToggleSelect : undefined}
+          role={selectable ? 'button' : undefined}
+          tabIndex={selectable ? 0 : undefined}
+          onKeyDown={
+            selectable
+              ? (e) => {
+                  if (e.key === ' ' || e.key === 'Enter') {
+                    e.preventDefault();
+                    onToggleSelect?.();
+                  }
+                }
+              : undefined
+          }
         >
-          <User className={`w-4 h-4 flex-shrink-0 ${themeConfig.icon.color.primary}`} />
+          {!selectable && (
+            <User className={cn('h-4 w-4 flex-shrink-0', themeConfig.icon.color.primary)} />
+          )}
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
-              <p className={`text-sm font-medium truncate ${themeConfig.text.body}`}>
+              <p
+                className={cn('truncate text-sm font-medium', themeConfig.text.body)}
+                title={guest.name}
+              >
                 {guest.name}
               </p>
               {guest.partySize > 1 && (
-                <span className={`${themeConfig.badge.partySize} flex-shrink-0 flex items-center gap-0.5`}>
-                  <Users className="w-2.5 h-2.5" />
+                <span
+                  className={cn(themeConfig.badge.partySize, 'flex flex-shrink-0 items-center gap-0.5')}
+                >
+                  <Users className="h-2.5 w-2.5" />
                   {guest.partySize}
                 </span>
               )}
             </div>
-            {guest.phoneNumber && (
-              <p className={`text-xs truncate ${themeConfig.text.muted}`}>
-                {guest.phoneNumber}
-              </p>
+            {meta ? (
+              <p className={cn('truncate text-xs', themeConfig.text.muted)}>{meta}</p>
+            ) : (
+              !compact &&
+              guest.phoneNumber && (
+                <p className={cn('truncate text-xs', themeConfig.text.muted)}>{guest.phoneNumber}</p>
+              )
             )}
           </div>
         </div>
 
-        {tapToSeat && (
+        {onSeat && (
           <button
             onClick={(e) => {
               e.stopPropagation();
-              onSeat?.();
+              onSeat();
             }}
-            aria-label={`Seat ${guest.name}`}
-            className="flex h-11 w-9 flex-shrink-0 items-center justify-center rounded-lg text-stone-400"
+            aria-label={`Move ${guest.name} to another table`}
+            title="Move to another table"
+            className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg text-stone-400 transition-colors hover:bg-emerald-50 hover:text-emerald-700 pointer-coarse:h-11 pointer-coarse:w-11"
           >
-            <ChevronRight className="h-5 w-5" />
+            <ArrowRightLeft className="h-4 w-4" />
           </button>
         )}
 
@@ -112,9 +152,10 @@ function DraggableGuest({
               onUnassign();
             }}
             aria-label={`Remove ${guest.name} from their table`}
-            className={`${themeConfig.button.delete} flex-shrink-0`}
+            title="Remove from table"
+            className={cn(themeConfig.button.delete, 'flex-shrink-0')}
           >
-            <X className="w-4 h-4" />
+            <X className="h-4 w-4" />
           </button>
         )}
       </div>
@@ -131,6 +172,10 @@ export default React.memo(DraggableGuest, (prevProps, nextProps) => {
     prevProps.guest.partySize === nextProps.guest.partySize &&
     prevProps.guest.tableId === nextProps.guest.tableId &&
     prevProps.showUnassign === nextProps.showUnassign &&
+    prevProps.selected === nextProps.selected &&
+    prevProps.selectable === nextProps.selectable &&
+    prevProps.compact === nextProps.compact &&
+    prevProps.meta === nextProps.meta &&
     Boolean(prevProps.onSeat) === Boolean(nextProps.onSeat)
   );
 });

@@ -107,7 +107,7 @@ import { useIsTouch } from '@/hooks/useMediaQuery';
 import { useToast } from '@/contexts/ToastContext';
 import DraggableTable from './DraggableTable';
 import DraggableGuest from './DraggableGuest';
-import AssignGuestSheet from './AssignGuestSheet';
+import MoveGuestsDialog from './MoveGuestsDialog';
 import Inspector from './floorplan/Inspector';
 import MiniMap from './floorplan/MiniMap';
 import SelectionOverlay from './floorplan/SelectionOverlay';
@@ -2786,8 +2786,8 @@ export default function SeatingChart() {
       </div>
 
       {seatingGuest && (
-        <AssignGuestSheet
-          guest={seatingGuest}
+        <MoveGuestsDialog
+          guests={[seatingGuest]}
           tables={tables}
           onAssign={(tableId) => {
             if (tableId) handleAssignGuest(seatingGuest.id, tableId);

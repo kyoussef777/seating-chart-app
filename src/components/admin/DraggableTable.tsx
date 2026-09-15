@@ -365,6 +365,8 @@ function DraggableTable({
         <div
           ref={popupRef}
           data-no-drag
+          role="group"
+          aria-label={`Guests at ${table.name}`}
           className={cn(
             'absolute left-1/2 top-full z-50 w-72 rounded-lg p-3 shadow-xl',
             `${themeConfig.classes.bgCard} border-2 ${themeConfig.classes.borderPrimary}`
