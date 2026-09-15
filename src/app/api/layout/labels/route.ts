@@ -3,6 +3,7 @@ import { db } from '@/lib/db';
 import { labels } from '@/lib/schema';
 import { eq } from 'drizzle-orm';
 import { getSession } from '@/lib/auth';
+import { normalizeLabel } from '@/lib/layout-objects';
 
 // GET all labels
 export async function GET() {
@@ -34,16 +35,10 @@ export async function POST(request: NextRequest) {
     await db.delete(labels);
 
     if (labelData.length > 0) {
-      // Let database generate UUIDs, ignore frontend IDs
-      await db.insert(labels).values(
-        labelData.map((label) => ({
-          text: label.text,
-          x: label.x,
-          y: label.y,
-          fontSize: label.fontSize,
-          rotation: label.rotation,
-        }))
-      );
+      // Let database generate UUIDs, ignore frontend IDs. Every field goes
+      // through the shared normaliser, so a malformed payload cannot become a
+      // malformed row (or a NOT NULL violation that fails the whole save).
+      await db.insert(labels).values(labelData.map(normalizeLabel));
     }
 
     return NextResponse.json({ success: true });

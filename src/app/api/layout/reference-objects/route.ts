@@ -3,6 +3,7 @@ import { db } from '@/lib/db';
 import { referenceObjects } from '@/lib/schema';
 import { eq } from 'drizzle-orm';
 import { getSession } from '@/lib/auth';
+import { normalizeReferenceObject } from '@/lib/layout-objects';
 
 // GET all reference objects
 export async function GET() {
@@ -34,17 +35,9 @@ export async function POST(request: NextRequest) {
     await db.delete(referenceObjects);
 
     if (objectData.length > 0) {
-      // Let database generate UUIDs, ignore frontend IDs
-      await db.insert(referenceObjects).values(
-        objectData.map((obj) => ({
-          type: obj.type,
-          x: obj.x,
-          y: obj.y,
-          width: obj.width,
-          height: obj.height,
-          rotation: obj.rotation,
-        }))
-      );
+      // Let database generate UUIDs, ignore frontend IDs. See the labels route:
+      // the shared normaliser is what keeps a bad payload out of the table.
+      await db.insert(referenceObjects).values(objectData.map(normalizeReferenceObject));
     }
 
     return NextResponse.json({ success: true });

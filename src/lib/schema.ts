@@ -35,11 +35,18 @@ export const eventSettings = pgTable('event_settings', {
 export const tables = pgTable('tables', {
   id: uuid('id').defaultRandom().primaryKey(),
   name: varchar('name', { length: 50 }).notNull(),
-  shape: varchar('shape', { length: 20 }).notNull(), // 'round' or 'rectangular'
+  /** One of TABLE_SHAPES in lib/seating.ts. */
+  shape: varchar('shape', { length: 20 }).notNull(),
   capacity: integer('capacity').notNull().default(8),
   positionX: real('position_x').notNull().default(0),
   positionY: real('position_y').notNull().default(0),
   rotation: real('rotation').notNull().default(0), // rotation in degrees (0-360)
+  /** Per-table size override in px. Null means "use the shape's default size",
+   *  so a table only carries a size once someone has resized it. */
+  width: real('width'),
+  height: real('height'),
+  /** Accent colour key from TABLE_COLORS (lib/seating.ts). Null = theme default. */
+  color: varchar('color', { length: 20 }),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 }, (table) => ({
   nameIdx: index('tables_name_idx').on(table.name),
@@ -78,6 +85,13 @@ export const labels = pgTable('labels', {
   y: real('y').notNull().default(0),
   fontSize: integer('font_size').notNull().default(16),
   rotation: real('rotation').notNull().default(0),
+  /** Ink colour, as a hex string. */
+  color: varchar('color', { length: 20 }).notNull().default('#064e3b'),
+  /** Plate behind the text: 'none' | 'light' | 'solid'. */
+  background: varchar('background', { length: 12 }).notNull().default('light'),
+  bold: boolean('bold').notNull().default(true),
+  /** Text alignment within the label: 'left' | 'center' | 'right'. */
+  align: varchar('align', { length: 10 }).notNull().default('center'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
@@ -89,7 +103,14 @@ export const shapes = pgTable('shapes', {
   width: real('width').notNull().default(100),
   height: real('height').notNull().default(100),
   rotation: real('rotation').notNull().default(0),
+  /** Fill colour, as a hex string. Opacity is kept separately so the picker
+   *  can offer a plain colour and a translucency slider. */
   color: varchar('color', { length: 50 }).notNull().default('#000000'),
+  /** Fill opacity, 0-1. */
+  opacity: real('opacity').notNull().default(0.15),
+  borderColor: varchar('border_color', { length: 50 }).notNull().default('#22c55e'),
+  /** 'solid' | 'dashed' | 'none'. */
+  borderStyle: varchar('border_style', { length: 12 }).notNull().default('dashed'),
   label: text('label'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
@@ -102,6 +123,11 @@ export const referenceObjects = pgTable('reference_objects', {
   width: real('width').notNull().default(100),
   height: real('height').notNull().default(100),
   rotation: real('rotation').notNull().default(0),
+  /** Overrides the type's stock caption. Null keeps the stock one, so
+   *  renaming the type later still renames untouched objects. */
+  label: text('label'),
+  /** Palette key from REFERENCE_OBJECT_COLORS. Null = the type's own colour. */
+  color: varchar('color', { length: 20 }),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 

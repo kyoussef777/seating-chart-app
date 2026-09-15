@@ -54,8 +54,13 @@ export function useTheme() {
     },
 
     table: {
-      default: `${theme.components.table.default} cursor-move select-none min-w-[140px]`,
-      dragging: `${theme.components.table.dragging} z-10`,
+      // No min-width: the floor plan sizes a table from its shape and its own
+      // width/height override, and a 140px floor forced every cocktail (80px)
+      // and square (120px) table to draw wider than the footprint used for
+      // clamping, hit-testing and the mini-map. DraggableTable sets the size,
+      // cursor and stacking inline.
+      default: `${theme.components.table.default} select-none`,
+      dragging: theme.components.table.dragging,
       dropTarget: theme.components.table.dropTarget,
       full: theme.components.table.full,
     },
