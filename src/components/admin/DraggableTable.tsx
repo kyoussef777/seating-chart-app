@@ -30,6 +30,10 @@ interface DraggableTableProps {
   isSelected?: boolean;
   locked?: boolean;
   onSeatGuest?: (guest: Guest) => void;
+  /** Canvas scale. The guest list and the rename field are counter-scaled by
+   *  it so they stay readable at any zoom, instead of shrinking with the plan
+   *  into a few unreadable pixels. */
+  zoom?: number;
 }
 
 const SHAPE_GLYPH: Record<string, string> = {
@@ -52,6 +56,7 @@ function DraggableTable({
   isSelected = false,
   locked = false,
   onSeatGuest,
+  zoom = 1,
 }: DraggableTableProps) {
   const themeConfig = useTheme();
   const [showGuestList, setShowGuestList] = useState(false);
@@ -96,6 +101,10 @@ function DraggableTable({
     setEditName(table.name);
     setNameError('');
   };
+
+  // Counter-scale: these are rendered inside the zoomed floor plan, so without
+  // this a rename field is a few pixels tall at a normal working zoom.
+  const counterScale = 1 / Math.max(zoom, 0.05);
 
   const handleSaveEdit = () => {
     const trimmedName = editName.trim();
@@ -212,7 +221,11 @@ function DraggableTable({
       onPointerDown={handlePointerDown}
       className={cn(
         themeConfig.table.default,
-        'relative flex flex-col items-center justify-center overflow-hidden p-2 select-none touch-none',
+        // No overflow clipping here. The guest list and the seat-count badge
+        // are positioned outside the table's own box, and clipping the root
+        // hid both of them completely — which is what made it impossible to
+        // see who was sitting where. The name truncates instead.
+        'relative flex flex-col items-center justify-center p-2 select-none touch-none',
         isOver && canDropHere ? themeConfig.table.dropTarget : '',
         isOver && !canDropHere ? themeConfig.table.full : '',
         isDragging ? themeConfig.table.dragging : '',
@@ -236,7 +249,17 @@ function DraggableTable({
         style={palette ? { color: palette.border } : undefined}
       >
         {isEditing ? (
-          <div className="flex flex-col gap-1" data-no-drag onClick={(e) => e.stopPropagation()}>
+          <div
+            className="absolute left-1/2 top-1/2 z-40 flex flex-col gap-1"
+            data-no-drag
+            onClick={(e) => e.stopPropagation()}
+            onPointerDown={(e) => e.stopPropagation()}
+            style={{
+              transform: `translate(-50%, -50%) scale(${counterScale}) rotate(${-(table.rotation || 0)}deg)`,
+              transformOrigin: 'center',
+              width: 180,
+            }}
+          >
             <input
               ref={inputRef}
               type="text"
@@ -244,15 +267,20 @@ function DraggableTable({
               onChange={(e) => setEditName(e.target.value)}
               onKeyDown={handleKeyDown}
               onBlur={handleSaveEdit}
-              className="w-full rounded border-2 border-emerald-500 px-1 py-0.5 text-xs text-stone-900 focus:outline-none focus:ring-2 focus:ring-emerald-300"
+              aria-label={`Rename ${table.name}`}
+              className="w-full rounded border-2 border-emerald-500 bg-white px-2 py-1.5 text-sm text-stone-900 shadow-lg focus:outline-none focus:ring-2 focus:ring-emerald-300"
             />
-            {nameError && <div className="text-[10px] font-normal text-red-600">{nameError}</div>}
+            {nameError && (
+              <div className="rounded bg-white px-1 text-[11px] font-normal text-red-600 shadow">
+                {nameError}
+              </div>
+            )}
           </div>
         ) : (
           <div
             className="cursor-text truncate rounded px-1 font-bold transition-colors hover:bg-emerald-50"
-            onClick={handleStartEdit}
-            title={locked ? table.name : `${table.name} — click to rename`}
+            onDoubleClick={handleStartEdit}
+            title={locked ? table.name : `${table.name} — double-click to rename`}
           >
             {table.name}
           </div>
@@ -338,15 +366,17 @@ function DraggableTable({
           ref={popupRef}
           data-no-drag
           className={cn(
-            // Below the table on narrow screens (where `left-full` would push
-            // it off the canvas), beside it from `sm` up.
-            'absolute z-50 w-56 rounded-lg p-3 shadow-xl',
-            'left-1/2 top-full mt-2 -translate-x-1/2',
-            'sm:left-full sm:top-0 sm:ml-2 sm:mt-0 sm:w-auto sm:min-w-[220px] sm:translate-x-0',
+            'absolute left-1/2 top-full z-50 w-72 rounded-lg p-3 shadow-xl',
             `${themeConfig.classes.bgCard} border-2 ${themeConfig.classes.borderPrimary}`
           )}
-          // Counter the table's own rotation so the list is always readable.
-          style={{ transform: `rotate(${-(table.rotation || 0)}deg)`, transformOrigin: 'top center' }}
+          /* Counter-scaled and un-rotated: this lives inside the zoomed floor
+             plan, so at a normal working zoom it would otherwise render a few
+             pixels tall and unreadable. */
+          style={{
+            transform: `translateX(-50%) scale(${counterScale}) rotate(${-(table.rotation || 0)}deg)`,
+            transformOrigin: 'top center',
+            marginTop: 8 * counterScale,
+          }}
           onClick={(e) => e.stopPropagation()}
         >
           <div className="mb-2 flex items-center justify-between">

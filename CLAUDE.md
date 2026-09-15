@@ -106,11 +106,28 @@ gesture works against that rather than against four different record shapes.
   table name/shape/seats/size/accent, label text/size/weight/alignment/backdrop/
   ink, shape fill/opacity/border, object caption/tint, and rotation for all.
 - **Undo/redo** (Ctrl/⌘+Z, Ctrl/⌘+Shift+Z) covers layout: moves, resizes,
-  rotations, alignment, arranging and styling. Adding or deleting a *table*, and
+  rotations, alignment, arranging and styling. A gesture snapshots state when
+  it starts but only commits it once something has actually moved, so selecting
+  things does not bury the real change under a pile of no-op entries that make
+  Ctrl+Z look broken. Adding or deleting a *table*, and
   seating a guest, are server-side operations and sit outside the stack. Restore
   diffs are computed from `tablesRef`, not inside a `setTables` updater — React
   defers that callback, so anything collected in it is empty by the time the
   writes go out.
+- **Seeing who is seated** has two routes, because one is a glance and the
+  other is the answer: the seat-count (or its badge) opens a list on the table
+  itself, and selecting a table lists everyone on it in the inspector, with a
+  button to take them off. Both the pop-up and the inline rename field are
+  counter-scaled by the zoom — they live inside the scaled plan, so at a normal
+  working zoom they would otherwise render a few unreadable pixels tall. The
+  table's own box must never set `overflow: hidden`: the pop-up and the
+  seat-count badge are positioned outside it, and clipping the root hid both
+  completely.
+- **Editing text** is double-click everywhere — a table's name and a label's
+  text alike — because a single click has to stay "select and drag", and any
+  slight movement during a single-click rename turned into a drag instead. The
+  inspector carries the same text as a plain field, which is the reliable route
+  when the plan is zoomed out.
 - **Stacking** is explicit (`LAYER`): shapes, then reference objects, then
   tables, then labels. Labels caption what they sit on, so they must stay on
   top; relying on DOM order hid a label behind any table it overlapped.

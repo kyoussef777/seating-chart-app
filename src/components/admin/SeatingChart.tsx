@@ -165,6 +165,9 @@ type Gesture =
       originX: number;
       originY: number;
       moved: boolean;
+      /** State before the gesture, committed to the undo stack only once
+       *  something actually moves. */
+      snapshot: Snapshot;
       items: Array<{ kind: ItemKind; id: string; x: number; y: number; width: number; height: number }>;
     }
   | {
@@ -175,8 +178,9 @@ type Gesture =
       originY: number;
       startFontSize: number;
       moved: boolean;
+      snapshot: Snapshot;
     }
-  | { kind: 'rotate'; item: CanvasItem; grabOffset: number; moved: boolean };
+  | { kind: 'rotate'; item: CanvasItem; grabOffset: number; moved: boolean; snapshot: Snapshot };
 
 /** True for anything that swallows a keystroke, so shortcuts do not fire while
  *  the organiser is typing. The old check missed contenteditable, which meant
@@ -646,13 +650,18 @@ export default function SeatingChart() {
     []
   );
 
-  const pushHistory = useCallback(() => {
+  /** Commit a snapshot taken earlier. Gestures capture state when they start
+   *  but only commit here once something has actually moved, so a plain click
+   *  to select does not bury the real change under a pile of no-op entries. */
+  const pushSnapshot = useCallback((snapshot: Snapshot) => {
     const history = historyRef.current;
-    history.past.push(takeSnapshot());
+    history.past.push(snapshot);
     if (history.past.length > HISTORY_LIMIT) history.past.shift();
     history.future = [];
     setHistoryVersion((version) => version + 1);
-  }, [takeSnapshot]);
+  }, []);
+
+  const pushHistory = useCallback(() => pushSnapshot(takeSnapshot()), [pushSnapshot, takeSnapshot]);
 
   const applySnapshot = useCallback(
     (snapshot: Snapshot) => {
@@ -1316,10 +1325,16 @@ export default function SeatingChart() {
         }));
       if (items.length === 0) return;
 
-      pushHistory();
-      beginGesture({ kind: 'move', originX: e.clientX, originY: e.clientY, moved: false, items });
+      beginGesture({
+        kind: 'move',
+        originX: e.clientX,
+        originY: e.clientY,
+        moved: false,
+        snapshot: takeSnapshot(),
+        items,
+      });
     },
-    [beginGesture, editingLabelId, pushHistory, selectItem, selectedItems]
+    [beginGesture, editingLabelId, selectItem, selectedItems, takeSnapshot]
   );
 
   const handleTableDragStart = useCallback(
@@ -1333,7 +1348,6 @@ export default function SeatingChart() {
       e.preventDefault();
       if (lockedRef.current) return;
       const label = labelsRef.current.find((l) => l.id === item.id);
-      pushHistory();
       beginGesture({
         kind: 'resize',
         item,
@@ -1342,9 +1356,10 @@ export default function SeatingChart() {
         originY: e.clientY,
         startFontSize: label?.fontSize ?? 0,
         moved: false,
+        snapshot: takeSnapshot(),
       });
     },
-    [beginGesture, pushHistory]
+    [beginGesture, takeSnapshot]
   );
 
   const startRotate = useCallback(
@@ -1354,7 +1369,6 @@ export default function SeatingChart() {
       if (lockedRef.current) return;
       const point = toCanvasPoint(e.clientX, e.clientY);
       const centre = { x: item.x + item.width / 2, y: item.y + item.height / 2 };
-      pushHistory();
       // Remember where on the dial the grip was grabbed, so the item does not
       // jump to the pointer the instant rotation starts.
       beginGesture({
@@ -1362,9 +1376,10 @@ export default function SeatingChart() {
         item,
         grabOffset: angleFromCentre(centre, point.x, point.y) - (item.rotation || 0),
         moved: false,
+        snapshot: takeSnapshot(),
       });
     },
-    [beginGesture, pushHistory, toCanvasPoint]
+    [beginGesture, takeSnapshot, toCanvasPoint]
   );
 
   /** Empty canvas: pan, or draw a marquee, depending on the active tool. */
@@ -1423,9 +1438,11 @@ export default function SeatingChart() {
       if (gesture.kind === 'move') {
         let deltaX = (e.clientX - gesture.originX) / zoom;
         let deltaY = (e.clientY - gesture.originY) / zoom;
-        gesture.moved =
-          gesture.moved ||
-          Math.hypot(e.clientX - gesture.originX, e.clientY - gesture.originY) > DRAG_THRESHOLD;
+        if (!gesture.moved && Math.hypot(e.clientX - gesture.originX, e.clientY - gesture.originY) > DRAG_THRESHOLD) {
+          gesture.moved = true;
+          pushSnapshot(gesture.snapshot);
+        }
+        if (!gesture.moved) return;
 
         const primary = gesture.items[0];
         if (snapToGrid) {
@@ -1456,7 +1473,10 @@ export default function SeatingChart() {
       }
 
       if (gesture.kind === 'resize') {
-        gesture.moved = true;
+        if (!gesture.moved) {
+          gesture.moved = true;
+          pushSnapshot(gesture.snapshot);
+        }
         const deltaX = (e.clientX - gesture.originX) / zoom;
         const deltaY = (e.clientY - gesture.originY) / zoom;
         const { item, handle } = gesture;
@@ -1502,7 +1522,10 @@ export default function SeatingChart() {
       }
 
       if (gesture.kind === 'rotate') {
-        gesture.moved = true;
+        if (!gesture.moved) {
+          gesture.moved = true;
+          pushSnapshot(gesture.snapshot);
+        }
         const { item } = gesture;
         const point = toCanvasPoint(e.clientX, e.clientY);
         const centre = { x: item.x + item.width / 2, y: item.y + item.height / 2 };
@@ -1582,6 +1605,7 @@ export default function SeatingChart() {
     gridSize,
     persistTable,
     persistTablePositions,
+    pushSnapshot,
     setItemPosition,
     smartGuides,
     snapToGrid,
@@ -2535,6 +2559,14 @@ export default function SeatingChart() {
                     : label.background === 'solid'
                       ? '#ffffff'
                       : 'rgba(255,255,255,0.72)';
+                // While editing, never render smaller than legible: a 20px
+                // label on a plan zoomed to 20% is 4px on screen, and you
+                // cannot see the caret, let alone what you are typing. At a
+                // normal zoom this is 1 and the label edits in place, as it
+                // should.
+                const editScale = editing
+                  ? Math.max(1, 15 / Math.max(1, label.fontSize * zoomLevel))
+                  : 1;
                 return (
                   <div
                     key={label.id}
@@ -2566,9 +2598,10 @@ export default function SeatingChart() {
                       color: label.color,
                       textAlign: label.align,
                       backgroundColor: backdrop,
-                      transform: `rotate(${label.rotation || 0}deg)`,
+                      transform: `rotate(${label.rotation || 0}deg)${editScale !== 1 ? ` scale(${editScale})` : ''}`,
                       transformOrigin: 'center',
-                      zIndex: LAYER.label,
+                      zIndex: editing ? LAYER.marquee : LAYER.label,
+                      outlineOffset: 2,
                     }}
                     contentEditable={editing}
                     suppressContentEditableWarning
@@ -2616,6 +2649,7 @@ export default function SeatingChart() {
                   isSelected={selectedItems.has(table.id)}
                   locked={locked}
                   onSeatGuest={setSeatingGuest}
+                  zoom={zoomLevel}
                 />
               ))}
 
@@ -2680,6 +2714,8 @@ export default function SeatingChart() {
               referenceObject={inspectorObject}
               locked={locked}
               tableNames={tables.map((t) => t.name)}
+              tableGuests={inspectorTable?.guests ?? []}
+              onUnassignGuest={handleUnassignGuest}
               onUpdateTable={updateTable}
               onUpdateLabel={(id, patch) => {
                 pushHistory();

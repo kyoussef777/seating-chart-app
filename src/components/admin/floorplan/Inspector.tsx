@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Copy, RotateCcw, Trash2, X } from 'lucide-react';
+import { Copy, RotateCcw, Trash2, UserMinus, Users, X } from 'lucide-react';
 import {
   BORDER_STYLES,
   LABEL_BACKGROUNDS,
@@ -25,6 +25,8 @@ import {
   TABLE_SHAPES,
   TABLE_SHAPE_LABELS,
   getDefaultTableDimensions,
+  seatsUsed,
+  type Guest,
   type Table,
 } from '@/lib/seating';
 import { cn } from '@/lib/utils';
@@ -203,6 +205,9 @@ export interface InspectorProps {
   referenceObject: ReferenceObject | null;
   locked: boolean;
   tableNames: string[];
+  /** Who is sitting at the selected table. */
+  tableGuests: Guest[];
+  onUnassignGuest: (guestId: string) => void;
   onUpdateTable: (id: string, patch: Partial<Table>) => void;
   onUpdateLabel: (id: string, patch: Partial<Label>) => void;
   onUpdateShape: (id: string, patch: Partial<Shape>) => void;
@@ -229,6 +234,8 @@ export default function Inspector({
   referenceObject,
   locked,
   tableNames,
+  tableGuests,
+  onUnassignGuest,
   onUpdateTable,
   onUpdateLabel,
   onUpdateShape,
@@ -378,6 +385,49 @@ export default function Inspector({
                 }))}
                 onChange={(color) => onUpdateTable(table.id, { color })}
               />
+
+              {/* Who is sitting here. The pop-up on the table itself is a
+                  glance; this is the readable, unclipped answer, and the place
+                  to take someone off the table. */}
+              <div className="space-y-1">
+                <span className={labelClass}>
+                  Seated here — {seatsUsed(tableGuests)}/{table.capacity} seats
+                </span>
+                {tableGuests.length === 0 ? (
+                  <p className="rounded-md border border-dashed border-stone-300 px-2 py-3 text-center text-xs text-stone-500">
+                    Nobody seated yet. Drag a guest here, or tap one in the list.
+                  </p>
+                ) : (
+                  <ul className="max-h-40 space-y-1 overflow-y-auto">
+                    {tableGuests.map((guest) => (
+                      <li
+                        key={guest.id}
+                        className="flex items-center gap-1.5 rounded-md border border-stone-200 bg-stone-50 px-2 py-1"
+                      >
+                        <span className="min-w-0 flex-1 truncate text-xs text-stone-800">
+                          {guest.name}
+                        </span>
+                        {guest.partySize > 1 && (
+                          <span className="flex shrink-0 items-center gap-0.5 rounded-full bg-stone-200 px-1.5 text-[10px] font-medium text-stone-700">
+                            <Users className="h-2.5 w-2.5" />
+                            {guest.partySize}
+                          </span>
+                        )}
+                        <button
+                          type="button"
+                          disabled={locked}
+                          onClick={() => onUnassignGuest(guest.id)}
+                          aria-label={`Remove ${guest.name} from ${table.name}`}
+                          title={`Remove ${guest.name} from this table`}
+                          className="flex shrink-0 items-center justify-center rounded p-1 text-stone-400 pointer-coarse:min-h-9 pointer-coarse:min-w-9 hover:bg-rose-50 hover:text-rose-600 disabled:opacity-50"
+                        >
+                          <UserMinus className="h-3.5 w-3.5" />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
             </>
           )}
 
