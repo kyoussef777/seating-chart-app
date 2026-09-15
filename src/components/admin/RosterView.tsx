@@ -169,7 +169,9 @@ function UnassignedColumn({
         )}
       >
         {guests.length === 0 ? (
-          <p className="px-2 py-6 text-center text-xs text-stone-400">Everyone has a table.</p>
+          <p className="px-2 py-6 text-center text-xs text-stone-400">
+            {highlight ? 'No matches.' : 'Everyone has a table.'}
+          </p>
         ) : (
           guests.map((guest) => (
             <div
@@ -194,6 +196,7 @@ export default function RosterView() {
   const [tables, setTables] = useState<Table[]>([]);
   const [unassigned, setUnassigned] = useState<Guest[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebounce(search, 250);
   const isTouch = useIsTouch();
@@ -209,6 +212,7 @@ export default function RosterView() {
   }, [unassigned]);
 
   const load = useCallback(async (initial = false) => {
+    if (!initial) setRefreshing(true);
     try {
       const data = await fetchSeating();
       setTables(data.tables);
@@ -217,6 +221,7 @@ export default function RosterView() {
       toast.error('Failed to load seating data');
     } finally {
       if (initial) setLoading(false);
+      setRefreshing(false);
     }
     // toast is stable (memoised context)
   }, [toast]);
@@ -320,10 +325,11 @@ export default function RosterView() {
           </div>
           <button
             onClick={() => load()}
+            disabled={refreshing}
             className={cn(themeConfig.button.tertiary, 'flex-shrink-0 lg:hidden')}
             aria-label="Reload roster"
           >
-            <RefreshCw className="h-4 w-4" />
+            <RefreshCw className={cn('h-4 w-4', refreshing && 'animate-spin')} />
           </button>
         </div>
 
@@ -354,10 +360,11 @@ export default function RosterView() {
           </span>
           <button
             onClick={() => load()}
+            disabled={refreshing}
             className={cn(themeConfig.button.tertiary, 'hidden lg:inline-flex')}
             title="Reload"
           >
-            <RefreshCw className="h-4 w-4" />
+            <RefreshCw className={cn('h-4 w-4', refreshing && 'animate-spin')} />
           </button>
         </div>
 
