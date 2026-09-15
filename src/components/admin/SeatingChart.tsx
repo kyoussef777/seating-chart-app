@@ -112,6 +112,7 @@ import Inspector from './floorplan/Inspector';
 import MiniMap from './floorplan/MiniMap';
 import SelectionOverlay from './floorplan/SelectionOverlay';
 import { REFERENCE_OBJECT_ICONS } from './floorplan/icons';
+import { LAYER } from './floorplan/layers';
 import type { CanvasItem, ItemKind } from './floorplan/types';
 
 const MIN_ZOOM = 0.2;
@@ -121,24 +122,6 @@ const DRAG_THRESHOLD = 3;
 const HISTORY_LIMIT = 50;
 /** Arrow-key nudges within this window fold into one undo step. */
 const NUDGE_COALESCE_MS = 700;
-
-/**
- * Stacking order on the floor plan.
- *
- * Zones and venue furniture are backdrops, tables sit on them, and labels are
- * annotations that have to stay readable — and clickable — over whatever they
- * caption. Without this everything relied on DOM order, so a label dropped on
- * a table was hidden behind it and could not be selected or retyped again.
- */
-const LAYER = {
-  shape: 1,
-  ref: 2,
-  table: 3,
-  tableDragging: 20,
-  label: 10,
-  guide: 35,
-  marquee: 45,
-} as const;
 
 const clampCanvasValue = (value: number) =>
   Math.min(CANVAS_MAX, Math.max(CANVAS_MIN, Math.round(value)));
@@ -816,6 +799,13 @@ export default function SeatingChart() {
   }, [loading, fitToView]);
 
   // Keep the minimap's viewport rectangle honest as the pane resizes.
+  //
+  // Depends on `loading` because the chart is not in the DOM during it: the
+  // component renders a spinner instead, so on first mount chartRef is null
+  // and an effect with empty deps would bail out and never run again. That
+  // left viewportSize at zero for the lifetime of the page — which silently
+  // broke the mini-map's viewport rectangle and anything else measured from
+  // the visible area.
   useEffect(() => {
     const element = chartRef.current;
     if (!element || typeof ResizeObserver === 'undefined') return;
@@ -824,7 +814,7 @@ export default function SeatingChart() {
     });
     observer.observe(element);
     return () => observer.disconnect();
-  }, []);
+  }, [loading]);
 
   // Wheel only zooms with a modifier (a trackpad pinch reports ctrlKey), so a
   // plain scroll still scrolls the admin page instead of being swallowed.
@@ -850,6 +840,15 @@ export default function SeatingChart() {
     }),
     [panOffset.x, panOffset.y, viewportSize.height, viewportSize.width, zoomLevel]
   );
+
+  /** Is the whole floor plan already on screen? Null until measured. */
+  const coversWholePlan =
+    viewportSize.width === 0
+      ? null
+      : viewport.x <= 1 &&
+        viewport.y <= 1 &&
+        viewport.x + viewport.width >= canvasSize.width - 1 &&
+        viewport.y + viewport.height >= canvasSize.height - 1;
 
   /** Middle of the visible floor plan, offset so a box of the given size lands
    *  centred there. New items appear where the organiser is looking. */
@@ -1938,6 +1937,20 @@ export default function SeatingChart() {
   );
 
   const selectedItem = selectedCanvasItems.length > 0 ? selectedCanvasItems[0] : null;
+
+  /**
+   * Which edge the inspector docks against.
+   *
+   * It floats over the plan, so a table selected in the top-right corner
+   * vanished under it the instant it was clicked — and its guest list with it.
+   * Selecting something on that side moves the panel to the other one.
+   */
+  const inspectorSide: 'left' | 'right' = useMemo(() => {
+    if (!selectedItem || viewportSize.width === 0) return 'right';
+    const right = (selectedItem.x + selectedItem.width) * zoomLevel + panOffset.x;
+    const PANEL = 272; // w-64 plus its margin
+    return right > viewportSize.width - PANEL ? 'left' : 'right';
+  }, [panOffset.x, selectedItem, viewportSize.width, zoomLevel]);
   const inspectorTable =
     selectedCanvasItems.length === 1 && selectedItem?.kind === 'table'
       ? tables.find((t) => t.id === selectedItem.id) ?? null
@@ -2713,6 +2726,7 @@ export default function SeatingChart() {
               shape={inspectorShape}
               referenceObject={inspectorObject}
               locked={locked}
+              side={inspectorSide}
               tableNames={tables.map((t) => t.name)}
               tableGuests={inspectorTable?.guests ?? []}
               onUnassignGuest={handleUnassignGuest}
@@ -2734,7 +2748,11 @@ export default function SeatingChart() {
               onClose={clearSelection}
             />
 
-            {showMiniMap && canvasItems.length > 0 && (
+            {/* Only worth the corner it occupies while part of the plan is off
+                screen. Framed to fit, its viewport box covers the whole map and
+                it says nothing — while still swallowing clicks on any table
+                parked underneath it. */}
+            {showMiniMap && canvasItems.length > 0 && coversWholePlan === false && (
               <MiniMap
                 items={canvasItems}
                 canvasSize={canvasSize}

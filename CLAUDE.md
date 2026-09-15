@@ -128,9 +128,22 @@ gesture works against that rather than against four different record shapes.
   slight movement during a single-click rename turned into a drag instead. The
   inspector carries the same text as a plain field, which is the reliable route
   when the plan is zoomed out.
-- **Stacking** is explicit (`LAYER`): shapes, then reference objects, then
-  tables, then labels. Labels caption what they sit on, so they must stay on
-  top; relying on DOM order hid a label behind any table it overlapped.
+- **Stacking** is explicit (`floorplan/layers.ts`): shapes, then reference
+  objects, then tables, then labels. Labels caption what they sit on, so they
+  must stay on top; relying on DOM order hid a label behind any table it
+  overlapped. A table sets its own z-index, which makes it a stacking context —
+  so anything inside it can only paint within the table's own slot, however
+  large its z-index. That is why a table's guest list appeared *behind* the
+  table next to it, and why a table lifts its whole self (`LAYER.tablePopup`)
+  while that list is open. DraggableTable and the canvas share the one table of
+  numbers for exactly this reason.
+- **Nothing floating over the plan may trap part of it.** The inspector docks to
+  whichever edge the selection is not on (selecting a table in the top-right
+  corner used to hide it, and its guest list, the instant it was clicked); the
+  mini-map only renders while part of the plan is off screen, since framed to
+  fit it says nothing and still swallows clicks on whatever sits beneath it; and
+  the guest list flips above its table and slides sideways to stay inside the
+  visible plan.
 - The edit zone (floor-plan size) is configurable in px and can be locked.
   Shrinking it pulls stranded items back inside rather than leaving them
   invisible and unselectable. Preferences (grid, snap, guides, mini-map, lock,
@@ -141,7 +154,11 @@ gesture works against that rather than against four different record shapes.
   UUIDs, so anything keyed off the `label-`/`shape-`/`ref-` prefixes breaks for
   saved items — match against the collections instead.
 - **Mini-map** (`floorplan/MiniMap.tsx`) draws every item to scale, frames the
-  visible region, and clicking or dragging it moves the view.
+  visible region, and clicking or dragging it moves the view. It measures that
+  region with a ResizeObserver whose effect depends on `loading`: the chart is
+  not in the DOM during it, so an effect with empty deps bailed out on a null
+  ref and never ran again, leaving the measured viewport at zero for the life
+  of the page.
 - **Touch.** Tap targets use Tailwind's `pointer-coarse:` variant rather than a
   width breakpoint: `sm:` releases the 44px floor at 640px, which is exactly
   where a tablet sits — an iPad is 768px wide and entirely finger-driven, so

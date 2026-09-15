@@ -204,6 +204,8 @@ export interface InspectorProps {
   shape: Shape | null;
   referenceObject: ReferenceObject | null;
   locked: boolean;
+  /** Which edge to dock against, so the panel never sits on the selection. */
+  side: 'left' | 'right';
   tableNames: string[];
   /** Who is sitting at the selected table. */
   tableGuests: Guest[];
@@ -233,6 +235,7 @@ export default function Inspector({
   shape,
   referenceObject,
   locked,
+  side,
   tableNames,
   tableGuests,
   onUnassignGuest,
@@ -256,7 +259,11 @@ export default function Inspector({
       data-no-drag
       role="region"
       aria-label="Selected item properties"
-      className="pointer-events-auto absolute inset-x-2 bottom-2 z-50 max-h-[55%] overflow-y-auto rounded-xl border border-stone-300 bg-white/97 p-3 shadow-2xl backdrop-blur sm:inset-x-auto sm:bottom-auto sm:right-3 sm:top-3 sm:max-h-[calc(100%-1.5rem)] sm:w-64"
+      className={cn(
+        'pointer-events-auto absolute inset-x-2 bottom-2 z-50 max-h-[55%] overflow-y-auto rounded-xl border border-stone-300 bg-white/97 p-3 shadow-2xl backdrop-blur',
+        'sm:inset-x-auto sm:bottom-auto sm:top-3 sm:max-h-[calc(100%-1.5rem)] sm:w-64',
+        side === 'right' ? 'sm:right-3' : 'sm:left-3'
+      )}
       onPointerDown={(e) => e.stopPropagation()}
     >
       <div className="mb-3 flex items-start justify-between gap-2">

@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useDrop } from 'react-dnd';
 import { Users, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/hooks/useTheme';
 import DraggableGuest from './DraggableGuest';
+import { LAYER } from './floorplan/layers';
 import {
   TABLE_COLORS,
   canSeat,
@@ -64,7 +65,10 @@ function DraggableTable({
   const [editName, setEditName] = useState(table.name);
   const [nameError, setNameError] = useState('');
   const popupRef = useRef<HTMLDivElement>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  /** Nudge, in screen px, that keeps the guest list inside the visible plan. */
+  const [popupShift, setPopupShift] = useState({ x: 0, y: 0 });
   const dimensions = getTableDimensions(table.shape, table);
 
   // Close popup when clicking outside
@@ -93,6 +97,57 @@ function DraggableTable({
       inputRef.current.select();
     }
   }, [isEditing]);
+
+  /**
+   * Keep the guest list inside the visible floor plan.
+   *
+   * The plan is a fixed window onto a much larger canvas, so a table near an
+   * edge opens its list straight into the clipped region — for a table in the
+   * bottom-right corner, most of the list was simply not on screen. This
+   * measures the table (never the shifted list, so the result is the same
+   * every time it runs) and flips the list above the table when there is no
+   * room below, nudging it sideways to stay within the window.
+   */
+  useLayoutEffect(() => {
+    if (!showGuestList) {
+      setPopupShift((prev) => (prev.x === 0 && prev.y === 0 ? prev : { x: 0, y: 0 }));
+      return;
+    }
+    const popup = popupRef.current;
+    const root = rootRef.current;
+    if (!popup || !root) return;
+
+    // The nearest ancestor that clips is the plan's viewport.
+    let clip: HTMLElement | null = root.parentElement;
+    while (clip && getComputedStyle(clip).overflow === 'visible') clip = clip.parentElement;
+    const bounds = clip
+      ? clip.getBoundingClientRect()
+      : new DOMRect(0, 0, window.innerWidth, window.innerHeight);
+
+    const tableRect = root.getBoundingClientRect();
+    const { width, height } = popup.getBoundingClientRect();
+    const margin = 8;
+
+    const naturalLeft = tableRect.left + tableRect.width / 2 - width / 2;
+    const naturalTop = tableRect.bottom + margin;
+
+    let x = 0;
+    if (naturalLeft + width > bounds.right - margin) x = bounds.right - margin - (naturalLeft + width);
+    if (naturalLeft + x < bounds.left + margin) x = bounds.left + margin - naturalLeft;
+
+    let y = 0;
+    if (naturalTop + height > bounds.bottom - margin) {
+      const above = tableRect.top - margin - height;
+      y = above >= bounds.top + margin
+        ? above - naturalTop // flip above the table
+        : bounds.bottom - margin - (naturalTop + height); // too tall either way: pin inside
+    }
+    if (naturalTop + y < bounds.top + margin) y = bounds.top + margin - naturalTop;
+
+    setPopupShift((prev) =>
+      Math.abs(prev.x - x) < 0.5 && Math.abs(prev.y - y) < 0.5 ? prev : { x, y }
+    );
+  }, [showGuestList, zoom, table.positionX, table.positionY, table.guests.length]);
 
   const handleStartEdit = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -160,9 +215,13 @@ function DraggableTable({
     [table.id, table.capacity, table.guests, onAssignGuest]
   );
 
-  const attachRef = (el: HTMLDivElement | null) => {
-    drop(el);
-  };
+  const attachRef = useCallback(
+    (el: HTMLDivElement | null) => {
+      rootRef.current = el;
+      drop(el);
+    },
+    [drop]
+  );
 
   const handlePointerDown = (e: React.PointerEvent) => {
     // Always claim the press: otherwise it reaches the canvas, which reads a
@@ -205,9 +264,11 @@ function DraggableTable({
     cursor: locked ? 'default' : isDragging ? 'grabbing' : 'grab',
     // No transition while dragging: the table must track the pointer exactly.
     transition: isDragging ? 'none' : 'box-shadow 150ms ease-out',
-    // Above shapes and venue furniture, below labels (which caption them) —
-    // see LAYER in SeatingChart. A table being dragged lifts above everything.
-    zIndex: isDragging ? 20 : 3,
+    // A table's own z-index makes it a stacking context, so anything inside it
+    // — the guest list especially — can only paint within the table's slot in
+    // the order. The table therefore lifts itself while that list is open,
+    // otherwise the neighbouring table covers it.
+    zIndex: isDragging ? LAYER.tableDragging : showGuestList ? LAYER.tablePopup : LAYER.table,
     willChange: isDragging ? 'left, top' : undefined,
     transform: `rotate(${table.rotation || 0}deg)`,
     transformOrigin: 'center',
@@ -374,10 +435,13 @@ function DraggableTable({
           /* Counter-scaled and un-rotated: this lives inside the zoomed floor
              plan, so at a normal working zoom it would otherwise render a few
              pixels tall and unreadable. */
+          /* The shift is in screen px; the element is laid out in floor-plan
+             units, so it converts by the same counter-scale. */
           style={{
             transform: `translateX(-50%) scale(${counterScale}) rotate(${-(table.rotation || 0)}deg)`,
             transformOrigin: 'top center',
-            marginTop: 8 * counterScale,
+            marginTop: (8 + popupShift.y) * counterScale,
+            marginLeft: popupShift.x * counterScale,
           }}
           onClick={(e) => e.stopPropagation()}
         >
