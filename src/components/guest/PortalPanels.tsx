@@ -342,14 +342,16 @@ export function PortalResultPanel({ template, portal }: PanelProps) {
               <Rule color={palette.accent} width={34} />
             </span>
           </div>
-          <p
-            className="m-0 mt-2.5 text-[16px] italic sm:text-[17px]"
-            style={{ fontFamily: fonts.body, color: palette.muted }}
-          >
-            {partySize > 1
-              ? `${partySize} seats reserved in your name`
-              : 'One seat reserved in your name'}
-          </p>
+          {template.id !== 'bridal-shower' && (
+            <p
+              className="m-0 mt-2.5 text-[16px] italic sm:text-[17px]"
+              style={{ fontFamily: fonts.body, color: palette.muted }}
+            >
+              {partySize > 1
+                ? `${partySize} seats reserved in your name`
+                : 'One seat reserved in your name'}
+            </p>
+          )}
         </>
       ) : (
         <p
