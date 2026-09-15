@@ -125,6 +125,17 @@ gesture works against that rather than against four different record shapes.
   saved items — match against the collections instead.
 - **Mini-map** (`floorplan/MiniMap.tsx`) draws every item to scale, frames the
   visible region, and clicking or dragging it moves the view.
+- **Touch.** Tap targets use Tailwind's `pointer-coarse:` variant rather than a
+  width breakpoint: `sm:` releases the 44px floor at 640px, which is exactly
+  where a tablet sits — an iPad is 768px wide and entirely finger-driven, so
+  every control had shrunk to desktop metrics on the device that needed the big
+  one. On a phone the editing controls live in a capped, scrolling drawer so
+  they cannot push the plan off the first screen; align and distribute are
+  hidden there because they need a multi-selection and the marquee that makes
+  one is a pointer gesture. On-canvas chrome is sized in screen pixels, so it
+  is counter-scaled against the zoom and nudged back inside the plan — zoomed
+  out, the buttons are wider than the item they belong to and would otherwise
+  hang off the edge.
 
 **Floor-plan geometry (`/src/lib/floorplan.ts`):**
 - Pure, DOM-free and unit tested: rotation-aware resize (the delta is

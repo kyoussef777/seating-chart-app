@@ -1931,9 +1931,12 @@ export default function SeatingChart() {
       ? referenceObjects.find((r) => r.id === selectedItem.id) ?? null
       : null;
 
+  // `pointer-coarse` rather than a width breakpoint: a tablet is finger-driven
+  // at 768px wide, where every `sm:` rule has already relaxed to desktop sizing.
   const toolbarButton = (active: boolean) =>
     cn(
-      'flex items-center gap-1 rounded px-3 py-1 text-sm',
+      'flex items-center justify-center gap-1 rounded px-3 py-1 text-sm',
+      'pointer-coarse:min-h-11',
       active ? themeConfig.button.primary : themeConfig.button.secondary
     );
 
@@ -2089,7 +2092,8 @@ export default function SeatingChart() {
                   aria-pressed={tool === 'select'}
                   title="Select tool (V) — drag to select several items"
                   className={cn(
-                    'px-2 py-1.5 transition-colors',
+                    'flex items-center justify-center px-3 py-1.5 transition-colors',
+                    'pointer-coarse:min-h-11 pointer-coarse:min-w-11',
                     tool === 'select' ? 'bg-emerald-600 text-white' : 'bg-white text-stone-700 hover:bg-stone-100'
                   )}
                 >
@@ -2100,7 +2104,8 @@ export default function SeatingChart() {
                   aria-pressed={tool === 'pan'}
                   title="Pan tool (H) — or hold Space with the select tool"
                   className={cn(
-                    'px-2 py-1.5 transition-colors',
+                    'flex items-center justify-center px-3 py-1.5 transition-colors',
+                    'pointer-coarse:min-h-11 pointer-coarse:min-w-11',
                     tool === 'pan' ? 'bg-emerald-600 text-white' : 'bg-white text-stone-700 hover:bg-stone-100'
                   )}
                 >
@@ -2169,8 +2174,16 @@ export default function SeatingChart() {
               </div>
             </div>
 
-            {/* Editing tools */}
-            <div className={`${showTools ? 'flex' : 'hidden'} flex-wrap items-center gap-2 md:flex`}>
+            {/* Editing tools. On a phone this is an opt-in drawer, so it is
+                capped and scrolls rather than pushing the floor plan off the
+                first screen; from `md` up it is just a toolbar row again. */}
+            <div
+              className={cn(
+                showTools ? 'flex' : 'hidden',
+                'max-h-[38vh] flex-wrap items-center gap-2 overflow-y-auto overscroll-contain',
+                'md:flex md:max-h-none md:overflow-visible'
+              )}
+            >
               <button onClick={() => setShowGrid(!showGrid)} className={toolbarButton(showGrid)} title="Toggle grid (G)">
                 <GridIcon className="h-4 w-4" />
                 Grid
@@ -2185,7 +2198,7 @@ export default function SeatingChart() {
                 aria-label="Grid size"
                 /* `themeConfig.input` is w-full, which made this select claim a
                    whole toolbar row on its own. */
-                className={cn(themeConfig.input, 'w-auto px-2 py-1 text-sm')}
+                className={cn(themeConfig.input, 'w-auto px-2 py-1 text-sm pointer-coarse:min-h-11')}
               >
                 <option value={10}>10px Grid</option>
                 <option value={20}>20px Grid</option>
@@ -2218,7 +2231,7 @@ export default function SeatingChart() {
                     setCanvasSize((prev) => ({ ...prev, width: clampCanvasValue(Number(e.target.value) || prev.width) }))
                   }
                   onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
-                  className={cn(themeConfig.input, 'w-20 px-2 py-1 text-sm disabled:opacity-50')}
+                  className={cn(themeConfig.input, 'w-20 px-2 py-1 text-sm pointer-coarse:min-h-11 disabled:opacity-50')}
                 />
                 <span className={themeConfig.text.body}>×</span>
                 <input
@@ -2234,7 +2247,7 @@ export default function SeatingChart() {
                     setCanvasSize((prev) => ({ ...prev, height: clampCanvasValue(Number(e.target.value) || prev.height) }))
                   }
                   onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
-                  className={cn(themeConfig.input, 'w-20 px-2 py-1 text-sm disabled:opacity-50')}
+                  className={cn(themeConfig.input, 'w-20 px-2 py-1 text-sm pointer-coarse:min-h-11 disabled:opacity-50')}
                 />
               </div>
 
@@ -2256,7 +2269,7 @@ export default function SeatingChart() {
                   disabled={locked}
                   aria-label="Label presets"
                   aria-expanded={openMenu === 'label'}
-                  className={cn(toolbarButton(false), 'rounded-l-none border-l-0 px-1.5 disabled:opacity-50')}
+                  className={cn(toolbarButton(false), 'rounded-l-none border-l-0 px-2 disabled:opacity-50')}
                 >
                   <ChevronDown className="h-3 w-3" />
                 </button>
@@ -2321,8 +2334,10 @@ export default function SeatingChart() {
 
               <div className="mx-1 hidden h-6 w-px bg-stone-300 md:block" />
 
-              {/* Alignment now works on every kind of item, not just tables. */}
-              <div className="flex items-center gap-1">
+              {/* Alignment now works on every kind of item, not just tables —
+                  but it needs a multi-selection, and the marquee that makes one
+                  is a pointer gesture, so this stays off phones. */}
+              <div className="hidden items-center gap-1 md:flex">
                 {(
                   [
                     { mode: 'left', icon: AlignLeft, title: 'Align left' },
@@ -2366,7 +2381,12 @@ export default function SeatingChart() {
               <button
                 onClick={() => deleteSelection(selectedItems)}
                 disabled={selectedItems.size === 0 || locked}
-                className={cn('flex items-center gap-1 rounded px-2 py-1 text-sm', themeConfig.button.danger, 'disabled:opacity-40')}
+                className={cn(
+                  'flex items-center justify-center gap-1 rounded px-2 py-1 text-sm',
+                  'pointer-coarse:min-h-11',
+                  themeConfig.button.danger,
+                  'disabled:opacity-40'
+                )}
                 title="Delete selected (Del)"
                 aria-label="Delete selected items"
               >
@@ -2631,6 +2651,8 @@ export default function SeatingChart() {
                 items={selectedCanvasItems}
                 zoom={zoomLevel}
                 locked={locked}
+                touch={isTouch}
+                canvasSize={canvasSize}
                 onResizeStart={startResize}
                 onRotateStart={startRotate}
                 onDelete={(item) => deleteSelection(new Set([item.id]))}

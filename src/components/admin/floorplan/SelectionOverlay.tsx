@@ -44,6 +44,10 @@ interface SelectionOverlayProps {
   /** Screen scale, so handles stay a constant physical size at any zoom. */
   zoom: number;
   locked: boolean;
+  /** Coarse pointer: grips and buttons grow to a finger-sized target. */
+  touch: boolean;
+  /** Floor-plan bounds, so the control bar never hangs off the edge. */
+  canvasSize: { width: number; height: number };
   onResizeStart: (item: CanvasItem, handle: ResizeHandle, e: React.PointerEvent) => void;
   onRotateStart: (item: CanvasItem, e: React.PointerEvent) => void;
   onDelete: (item: CanvasItem) => void;
@@ -54,6 +58,8 @@ export default function SelectionOverlay({
   items,
   zoom,
   locked,
+  touch,
+  canvasSize,
   onResizeStart,
   onRotateStart,
   onDelete,
@@ -62,15 +68,26 @@ export default function SelectionOverlay({
   // Handles are drawn inside the zoomed surface, so everything counter-scales
   // to stay grabbable at 20% and unobtrusive at 300%.
   const scale = 1 / Math.max(zoom, 0.01);
-  const grip = 11 * scale;
-  const button = 26 * scale;
-  const offset = 34 * scale;
+  const grip = (touch ? 15 : 11) * scale;
+  const button = (touch ? 40 : 26) * scale;
+  const offset = (touch ? 50 : 34) * scale;
 
   // Grips are useless on an item smaller than the grips themselves, and worse
   // than useless: eight of them blanket a small label at low zoom and swallow
   // the double-click that opens it for editing. Below this the item is sized
   // from the inspector (or after zooming in) instead.
-  const GRIP_MIN_SCREEN_PX = 34;
+  const GRIP_MIN_SCREEN_PX = touch ? 46 : 34;
+
+  // Three buttons plus the two gaps between them, in floor-plan units.
+  const barHalfWidth = (button * 3 + 8 * scale) / 2;
+  const barShift = (item: CanvasItem) => {
+    const centre = item.x + item.width / 2;
+    const clamped = Math.min(
+      Math.max(centre, barHalfWidth),
+      Math.max(barHalfWidth, canvasSize.width - barHalfWidth)
+    );
+    return clamped - centre;
+  };
   const gripsFit = (item: CanvasItem) =>
     item.width * zoom >= GRIP_MIN_SCREEN_PX && item.height * zoom >= GRIP_MIN_SCREEN_PX;
 
@@ -124,14 +141,23 @@ export default function SelectionOverlay({
                 />
               ))}
 
-            {/* Rotate, duplicate and delete sit above the item on one bar. */}
+            {/* Rotate, duplicate and delete sit on one bar above the item, or
+                below it when the item is close enough to the top of the plan
+                that the bar would be clipped — which on a phone, where the
+                whole plan is barely taller than the bar, happens often.
+                Horizontally the bar is nudged back inside the plan: the buttons
+                keep a constant screen size, so zoomed out they are far wider
+                than the item they belong to and would otherwise hang off the
+                edge, unreachable. */}
             {single && !locked && (
               <div
                 className="pointer-events-auto absolute left-1/2 flex items-center"
                 style={{
-                  top: -offset,
+                  ...(item.y < offset
+                    ? { top: item.height + offset - button }
+                    : { top: -offset }),
                   gap: 4 * scale,
-                  transform: 'translateX(-50%)',
+                  transform: `translateX(calc(-50% + ${barShift(item)}px))`,
                   touchAction: 'none',
                 }}
               >

@@ -33,8 +33,12 @@ import type { CanvasItem } from './types';
 /* ---- small field primitives ------------------------------------------- */
 
 const labelClass = 'block text-[11px] font-semibold uppercase tracking-wide text-stone-500';
+// `pointer-coarse` keeps these finger-sized on tablets too, where every `sm:`
+// rule has already relaxed to desktop metrics.
 const controlClass =
-  'w-full rounded-md border border-stone-300 bg-white px-2 py-1.5 text-sm text-stone-900 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500';
+  'w-full rounded-md border border-stone-300 bg-white px-2 py-1.5 text-sm text-stone-900 ' +
+  'pointer-coarse:min-h-11 pointer-coarse:py-2.5 ' +
+  'focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500';
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -123,6 +127,7 @@ function Swatches({
             onClick={() => onChange(null)}
             className={cn(
               'h-6 w-6 rounded-full border-2 bg-white text-[10px] font-bold text-stone-500',
+              'pointer-coarse:h-9 pointer-coarse:w-9',
               value === null ? 'border-emerald-600 ring-2 ring-emerald-200' : 'border-stone-300'
             )}
           >
@@ -139,6 +144,7 @@ function Swatches({
             onClick={() => onChange(colour.id)}
             className={cn(
               'h-6 w-6 rounded-full border-2 transition-transform hover:scale-110',
+              'pointer-coarse:h-9 pointer-coarse:w-9',
               value === colour.id ? 'border-emerald-600 ring-2 ring-emerald-200' : 'border-white shadow'
             )}
             style={{ backgroundColor: colour.hex }}
@@ -172,6 +178,7 @@ function SegmentedControl<T extends string>({
             onClick={() => onChange(option.id)}
             className={cn(
               'flex-1 px-2 py-1 text-xs font-medium transition-colors',
+              'pointer-coarse:min-h-11',
               value === option.id
                 ? 'bg-emerald-600 text-white'
                 : 'bg-white text-stone-700 hover:bg-stone-100'
@@ -240,6 +247,8 @@ export default function Inspector({
   return (
     <div
       data-no-drag
+      role="region"
+      aria-label="Selected item properties"
       className="pointer-events-auto absolute inset-x-2 bottom-2 z-50 max-h-[55%] overflow-y-auto rounded-xl border border-stone-300 bg-white/97 p-3 shadow-2xl backdrop-blur sm:inset-x-auto sm:bottom-auto sm:right-3 sm:top-3 sm:max-h-[calc(100%-1.5rem)] sm:w-64"
       onPointerDown={(e) => e.stopPropagation()}
     >
@@ -256,7 +265,7 @@ export default function Inspector({
           type="button"
           onClick={onClose}
           aria-label="Clear selection"
-          className="rounded-md p-1 text-stone-400 hover:bg-stone-100 hover:text-stone-700"
+          className="flex items-center justify-center rounded-md p-1 text-stone-400 pointer-coarse:min-h-11 pointer-coarse:min-w-11 hover:bg-stone-100 hover:text-stone-700"
         >
           <X className="h-4 w-4" />
         </button>
@@ -349,7 +358,7 @@ export default function Inspector({
                   type="button"
                   disabled={locked}
                   onClick={() => onUpdateTable(table.id, { width: null, height: null })}
-                  className="inline-flex items-center gap-1 text-xs font-medium text-emerald-700 hover:text-emerald-800 disabled:opacity-50"
+                  className="inline-flex items-center gap-1 text-xs font-medium text-emerald-700 pointer-coarse:min-h-11 hover:text-emerald-800 disabled:opacity-50"
                 >
                   <RotateCcw className="h-3 w-3" />
                   Reset to {TABLE_SHAPE_LABELS[table.shape as keyof typeof TABLE_SHAPE_LABELS] ?? 'default'} size (
@@ -521,7 +530,7 @@ export default function Inspector({
                   max={100}
                   value={Math.round(shape.opacity * 100)}
                   disabled={locked}
-                  className="w-full accent-emerald-600 disabled:opacity-50"
+                  className="w-full accent-emerald-600 pointer-coarse:h-8 disabled:opacity-50"
                   onChange={(e) => onUpdateShape(shape.id, { opacity: Number(e.target.value) / 100 })}
                 />
               </Field>
@@ -617,7 +626,7 @@ export default function Inspector({
               max={359}
               value={Math.round(item.rotation) % 360}
               disabled={locked}
-              className="w-full accent-emerald-600 disabled:opacity-50"
+              className="w-full accent-emerald-600 pointer-coarse:h-8 disabled:opacity-50"
               onChange={(e) => {
                 const rotation = Number(e.target.value);
                 if (table) onUpdateTable(table.id, { rotation });
@@ -639,7 +648,7 @@ export default function Inspector({
                     else if (referenceObject)
                       onUpdateReferenceObject(referenceObject.id, { rotation: angle });
                   }}
-                  className="flex-1 rounded border border-stone-300 bg-white py-0.5 text-[11px] text-stone-700 hover:bg-stone-100 disabled:opacity-50"
+                  className="flex-1 rounded border border-stone-300 bg-white py-0.5 text-[11px] text-stone-700 pointer-coarse:min-h-10 hover:bg-stone-100 disabled:opacity-50"
                 >
                   {angle}°
                 </button>
@@ -654,7 +663,7 @@ export default function Inspector({
           type="button"
           disabled={locked || selectionCount > 1}
           onClick={() => onDuplicate(item)}
-          className="inline-flex flex-1 items-center justify-center gap-1 rounded-md border border-stone-300 bg-white px-2 py-1.5 text-xs font-medium text-stone-700 hover:bg-stone-50 disabled:opacity-50"
+          className="inline-flex flex-1 items-center justify-center gap-1 rounded-md border border-stone-300 bg-white px-2 py-1.5 text-xs font-medium text-stone-700 pointer-coarse:min-h-11 hover:bg-stone-50 disabled:opacity-50"
         >
           <Copy className="h-3.5 w-3.5" />
           Duplicate
@@ -663,7 +672,7 @@ export default function Inspector({
           type="button"
           disabled={locked}
           onClick={() => onDelete(item)}
-          className="inline-flex flex-1 items-center justify-center gap-1 rounded-md bg-rose-500 px-2 py-1.5 text-xs font-medium text-white hover:bg-rose-600 disabled:opacity-50"
+          className="inline-flex flex-1 items-center justify-center gap-1 rounded-md bg-rose-500 px-2 py-1.5 text-xs font-medium text-white pointer-coarse:min-h-11 hover:bg-rose-600 disabled:opacity-50"
         >
           <Trash2 className="h-3.5 w-3.5" />
           Delete

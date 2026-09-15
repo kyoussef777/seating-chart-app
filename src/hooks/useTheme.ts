@@ -1,8 +1,18 @@
 import { theme, themeClasses, combineThemeClasses } from '@/lib/theme';
 
-/** Minimum comfortable tap target on touch screens (44px), relaxed on desktop. */
-const touch = 'min-h-11 sm:min-h-0';
-const iconTouch = 'inline-flex items-center justify-center min-h-11 min-w-11 sm:min-h-0 sm:min-w-0';
+/**
+ * Minimum comfortable tap target on touch screens (44px), relaxed on desktop.
+ *
+ * The `sm:` release is by viewport width, which misses tablets: an iPad is
+ * 768px wide and entirely finger-driven, so every control shrank to its
+ * compact desktop size on exactly the device that needs the big one. The
+ * `sm:pointer-coarse:` half puts the floor back wherever the pointer is
+ * actually coarse, at any width.
+ */
+const touch = 'min-h-11 sm:min-h-0 sm:pointer-coarse:min-h-11';
+const iconTouch =
+  'inline-flex items-center justify-center min-h-11 min-w-11 sm:min-h-0 sm:min-w-0 ' +
+  'sm:pointer-coarse:min-h-11 sm:pointer-coarse:min-w-11';
 
 export function useTheme() {
   return {
