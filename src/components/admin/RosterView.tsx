@@ -369,7 +369,7 @@ export default function RosterView() {
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-4">
-        <div className="lg:col-span-1">
+        <div className="lg:sticky lg:top-32 lg:col-span-1 lg:self-start">
           <UnassignedColumn
             guests={visibleUnassigned}
             onUnassignDrop={(id) => move(id, null)}
