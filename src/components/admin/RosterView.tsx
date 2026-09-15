@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useDrop } from 'react-dnd';
-import { Users, Search, UserX, Armchair, RefreshCw, ChevronDown } from 'lucide-react';
+import { Users, Search, UserX, Armchair, RefreshCw, ChevronDown, FileSpreadsheet } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/hooks/useTheme';
 import { useToast } from '@/contexts/ToastContext';
@@ -20,6 +20,7 @@ import {
   type GuestDragItem,
   type Table,
 } from '@/lib/seating';
+import { downloadSeatingExcel } from '@/lib/seating-export';
 
 /** One table, listing everyone seated at it. Accepts guest drops. */
 function TableCard({
@@ -280,6 +281,16 @@ export default function RosterView() {
     [toast, load]
   );
 
+  const exportToExcel = useCallback(async () => {
+    try {
+      await downloadSeatingExcel(tables, unassigned);
+      toast.success('Seating chart exported to Excel');
+    } catch (error) {
+      console.error('Failed to export to Excel:', error);
+      toast.error('Failed to export to Excel');
+    }
+  }, [tables, unassigned, toast]);
+
   const stats = useMemo(() => {
     const seated = tables.reduce((n, t) => n + t.guests.length, 0);
     const seatedSeats = tables.reduce((n, t) => n + seatsUsed(t.guests), 0);
@@ -358,6 +369,18 @@ export default function RosterView() {
             <Users className="h-4 w-4 text-stone-500" />
             <strong>{stats.capacity}</strong> capacity
           </span>
+          <button
+            onClick={exportToExcel}
+            disabled={tables.length === 0 && unassigned.length === 0}
+            className={cn(
+              themeConfig.button.secondary,
+              'inline-flex items-center gap-2 disabled:cursor-not-allowed disabled:opacity-50'
+            )}
+            title="Export table assignments to Excel"
+          >
+            <FileSpreadsheet className="h-4 w-4" />
+            Export to Excel
+          </button>
           <button
             onClick={() => load()}
             disabled={refreshing}

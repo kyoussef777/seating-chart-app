@@ -9,6 +9,7 @@ import {
   AlignRight,
   AlignStartHorizontal,
   AlignVerticalSpaceAround,
+  Camera,
   ChevronDown,
   Circle,
   FileSpreadsheet,
@@ -97,9 +98,9 @@ import {
   getTableDimensions,
   isTableShape,
   persistAssignment,
-  safeCell,
   seatsAvailable,
 } from '@/lib/seating';
+import { downloadSeatingExcel } from '@/lib/seating-export';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/hooks/useTheme';
 import { useDebounce } from '@/hooks/useDebounce';
@@ -1845,65 +1846,55 @@ export default function SeatingChart() {
 
   const exportToExcel = useCallback(async () => {
     try {
-      const excelData: (string | number)[][] = [];
-      excelData.push(['Table Name', 'Table Shape', 'Capacity', 'Seats Used', 'Guest Name', 'Party Size', 'Phone Number', 'Address']);
-
-      const sortedTables = [...tables].sort((a, b) => a.name.localeCompare(b.name));
-
-      sortedTables.forEach((table) => {
-        const seatsUsed = table.guests.reduce((total, guest) => total + (guest.partySize || 1), 0);
-
-        if (table.guests.length === 0) {
-          excelData.push([safeCell(table.name), safeCell(table.shape), table.capacity, 0, '(No guests assigned)', '', '', '']);
-        } else {
-          const sortedGuests = [...table.guests].sort((a, b) => a.name.localeCompare(b.name));
-          sortedGuests.forEach((guest, index) => {
-            excelData.push([
-              index === 0 ? safeCell(table.name) : '',
-              index === 0 ? safeCell(table.shape) : '',
-              index === 0 ? table.capacity : '',
-              index === 0 ? seatsUsed : '',
-              safeCell(guest.name),
-              guest.partySize || 1,
-              safeCell(guest.phoneNumber),
-              safeCell(guest.address),
-            ]);
-          });
-        }
-      });
-
-      if (unassignedGuests.length > 0) {
-        excelData.push([]);
-        excelData.push(['UNASSIGNED GUESTS', '', '', '', '', '', '', '']);
-        const sortedUnassigned = [...unassignedGuests].sort((a, b) => a.name.localeCompare(b.name));
-        sortedUnassigned.forEach((guest) => {
-          excelData.push(['', '', '', '', safeCell(guest.name), guest.partySize || 1, safeCell(guest.phoneNumber), safeCell(guest.address)]);
-        });
-      }
-
-      // Loaded on demand: ~400kB that only the export button needs.
-      const XLSX = await import('xlsx');
-      const wb = XLSX.utils.book_new();
-      const ws = XLSX.utils.aoa_to_sheet(excelData);
-      ws['!cols'] = [
-        { wch: 15 },
-        { wch: 12 },
-        { wch: 10 },
-        { wch: 12 },
-        { wch: 25 },
-        { wch: 12 },
-        { wch: 15 },
-        { wch: 30 },
-      ];
-      XLSX.utils.book_append_sheet(wb, ws, 'Seating Chart');
-      const date = new Date().toISOString().split('T')[0];
-      XLSX.writeFile(wb, `seating-chart-${date}.xlsx`);
+      await downloadSeatingExcel(tables, unassignedGuests);
       toast.success('Seating chart exported to Excel');
     } catch (error) {
       console.error('Failed to export to Excel:', error);
       toast.error('Failed to export to Excel');
     }
   }, [tables, unassignedGuests, toast]);
+
+  const [capturingSnapshot, setCapturingSnapshot] = useState(false);
+
+  /** Downloads the floor plan as a PNG at its true (unpanned, unzoomed) size.
+   *  Selection is cleared first so grips/handles don't show up in the image. */
+  const exportSnapshot = useCallback(async () => {
+    const node = canvasRef.current;
+    if (!node) return;
+
+    setCapturingSnapshot(true);
+    if (selectedItems.size > 0) clearSelection();
+    try {
+      // Let the selection-cleared re-render commit before the DOM is cloned.
+      await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+
+      const { toPng } = await import('html-to-image');
+      // Cap the raster size regardless of how large the edit zone has been
+      // resized to, so a 6000px canvas doesn't try to rasterize at 12000px.
+      const longEdge = Math.max(canvasSize.width, canvasSize.height, 1);
+      const pixelRatio = Math.min(2, 4000 / longEdge);
+
+      const dataUrl = await toPng(node, {
+        width: canvasSize.width,
+        height: canvasSize.height,
+        pixelRatio,
+        backgroundColor: '#ffffff',
+        style: { transform: 'none', transition: 'none' },
+      });
+
+      const link = document.createElement('a');
+      const date = new Date().toISOString().split('T')[0];
+      link.download = `floor-plan-${date}.png`;
+      link.href = dataUrl;
+      link.click();
+      toast.success('Floor plan downloaded as an image');
+    } catch (error) {
+      console.error('Failed to export floor plan snapshot:', error);
+      toast.error('Failed to download floor plan image');
+    } finally {
+      setCapturingSnapshot(false);
+    }
+  }, [canvasSize, clearSelection, selectedItems, toast]);
 
   /* ---- derived render values --------------------------------------------- */
 
@@ -1962,9 +1953,9 @@ export default function SeatingChart() {
             {unassignedGuests.length} guest{unassignedGuests.length === 1 ? '' : 's'} still to seat
           </p>
         </div>
-        {/* Two columns on phones: four full-width buttons stacked would push
+        {/* Two columns on phones: five full-width buttons stacked would push
             the floor plan off the first screen. */}
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:flex lg:gap-2">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-5 lg:flex lg:gap-2">
           <button
             onClick={savePreferences}
             className={`inline-flex items-center justify-center gap-2 ${themeConfig.button.secondary}`}
@@ -1978,11 +1969,21 @@ export default function SeatingChart() {
             onClick={exportToExcel}
             disabled={tables.length === 0}
             className={`inline-flex items-center justify-center gap-2 ${themeConfig.button.secondary} disabled:cursor-not-allowed disabled:opacity-50`}
-            title="Export seating chart to Excel"
+            title="Export table assignments to Excel"
           >
             <FileSpreadsheet className="h-4 w-4" />
             <span className="sm:hidden">Export</span>
             <span className="hidden sm:inline">Export to Excel</span>
+          </button>
+          <button
+            onClick={exportSnapshot}
+            disabled={canvasItems.length === 0 || capturingSnapshot}
+            className={`inline-flex items-center justify-center gap-2 ${themeConfig.button.secondary} disabled:cursor-not-allowed disabled:opacity-50`}
+            title="Download a snapshot image of the floor plan"
+          >
+            <Camera className={cn('h-4 w-4', capturingSnapshot && 'animate-pulse')} />
+            <span className="sm:hidden">Snapshot</span>
+            <span className="hidden sm:inline">{capturingSnapshot ? 'Capturing…' : 'Download Snapshot'}</span>
           </button>
 
           <div className="relative" ref={openMenu === 'arrange' ? menuRef : undefined}>
