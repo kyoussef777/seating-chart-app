@@ -1,46 +1,26 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useDrop } from 'react-dnd';
-import { Trash2, Users, X, RotateCw } from 'lucide-react';
+import { Users, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/hooks/useTheme';
 import DraggableGuest from './DraggableGuest';
 import {
+  TABLE_COLORS,
   canSeat,
   getTableDimensions,
   seatsAvailable,
   seatsUsed as sumSeats,
+  type Guest,
   type GuestDragItem,
-  type Table as SeatingTable,
+  type Table,
 } from '@/lib/seating';
-
-interface Guest {
-  id: string;
-  name: string;
-  phoneNumber: string | null;
-  address: string | null;
-  partySize: number;
-  tableId: string | null;
-}
-
-interface Table {
-  id: string;
-  name: string;
-  shape: string;
-  capacity: number;
-  positionX: number;
-  positionY: number;
-  rotation: number;
-  guests: Guest[];
-}
 
 interface DraggableTableProps {
   table: Table;
-  onDelete: () => void;
   onAssignGuest: (guestId: string, tableId: string) => void;
   onUnassignGuest: (guestId: string) => void;
-  onRotate: (tableId: string, rotation: number) => void;
   onRename: (tableId: string, newName: string) => void;
   allTableNames: string[];
   /** Pointer events drive the move (mouse, pen and touch alike); the canvas
@@ -52,12 +32,19 @@ interface DraggableTableProps {
   onSeatGuest?: (guest: Guest) => void;
 }
 
+const SHAPE_GLYPH: Record<string, string> = {
+  round: '⭕',
+  square: '⬜',
+  rectangular: '▬',
+  oval: '⬭',
+  'u-shape': '⊓',
+  cocktail: '○',
+};
+
 function DraggableTable({
   table,
-  onDelete,
   onAssignGuest,
   onUnassignGuest,
-  onRotate,
   onRename,
   allTableNames,
   onDragStart,
@@ -73,7 +60,7 @@ function DraggableTable({
   const [nameError, setNameError] = useState('');
   const popupRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const dimensions = getTableDimensions(table.shape);
+  const dimensions = getTableDimensions(table.shape, table);
 
   // Close popup when clicking outside
   useEffect(() => {
@@ -104,6 +91,7 @@ function DraggableTable({
 
   const handleStartEdit = (e: React.MouseEvent) => {
     e.stopPropagation();
+    if (locked) return;
     setIsEditing(true);
     setEditName(table.name);
     setNameError('');
@@ -127,7 +115,7 @@ function DraggableTable({
       return;
     }
 
-    onRename(table.id, trimmedName);
+    if (trimmedName !== table.name) onRename(table.id, trimmedName);
     setIsEditing(false);
     setNameError('');
   };
@@ -151,7 +139,7 @@ function DraggableTable({
   const [{ isOver, canDropHere }, drop] = useDrop(
     () => ({
       accept: 'guest',
-      canDrop: (item: GuestDragItem) => canSeat(table as SeatingTable, item),
+      canDrop: (item: GuestDragItem) => canSeat(table, item),
       drop: (item: GuestDragItem) => {
         onAssignGuest(item.id, table.id);
       },
@@ -169,15 +157,38 @@ function DraggableTable({
 
   const handlePointerDown = (e: React.PointerEvent) => {
     // Always claim the press: otherwise it reaches the canvas, which reads a
-    // press on empty space as "start panning".
+    // press on empty space as "start panning" or "start a marquee".
     e.stopPropagation();
     // Controls, the rename field and the guest popup keep their own taps.
     if ((e.target as HTMLElement).closest('button, input, [data-no-drag]')) return;
     onDragStart(table.id, e);
   };
 
-  const tableStyle = {
-    position: 'absolute' as const,
+  const seatsUsed = sumSeats(table.guests);
+  const isFull = seatsUsed >= table.capacity;
+  const isOver100 = seatsUsed > table.capacity;
+  const freeSeats = seatsAvailable(table);
+
+  const isRound = table.shape === 'round';
+  const isOval = table.shape === 'oval';
+  const isCocktail = table.shape === 'cocktail';
+  const isUShape = table.shape === 'u-shape';
+
+  // A resized table should not keep 14px text on a 60px footprint, nor stay
+  // tiny once it has been scaled up to fill a head-table slot.
+  const scale = Math.min(dimensions.width, dimensions.height) / 140;
+  const compact = isCocktail || scale < 0.75;
+
+  const palette = table.color ? TABLE_COLORS[table.color] : null;
+
+  const getBorderRadius = () => {
+    if (isRound || isCocktail || isOval) return '50%';
+    if (isUShape) return '12px 12px 4px 4px';
+    return '8px';
+  };
+
+  const tableStyle: React.CSSProperties = {
+    position: 'absolute',
     left: `${table.positionX}px`,
     top: `${table.positionY}px`,
     width: `${dimensions.width}px`,
@@ -185,35 +196,14 @@ function DraggableTable({
     cursor: locked ? 'default' : isDragging ? 'grabbing' : 'grab',
     // No transition while dragging: the table must track the pointer exactly.
     transition: isDragging ? 'none' : 'box-shadow 150ms ease-out',
-    zIndex: isDragging ? 30 : undefined,
+    // Above shapes and venue furniture, below labels (which caption them) —
+    // see LAYER in SeatingChart. A table being dragged lifts above everything.
+    zIndex: isDragging ? 20 : 3,
     willChange: isDragging ? 'left, top' : undefined,
     transform: `rotate(${table.rotation || 0}deg)`,
     transformOrigin: 'center',
-  };
-
-  const seatsUsed = sumSeats(table.guests);
-  const isFull = seatsUsed >= table.capacity;
-  const freeSeats = seatsAvailable(table as SeatingTable);
-
-  const isRound = table.shape === 'round';
-  const isOval = table.shape === 'oval';
-  const isCocktail = table.shape === 'cocktail';
-  const isUShape = table.shape === 'u-shape';
-
-  const getBorderRadius = () => {
-    if (isRound || isCocktail) return '50%';
-    if (isOval) return '50%';
-    if (isUShape) return '12px 12px 4px 4px';
-    return '8px';
-  };
-
-  const getSpecialShape = () => {
-    if (isUShape) {
-      return (
-        <div className="absolute inset-x-0 bottom-0 h-1/3 bg-white border-t-2 border-emerald-600" />
-      );
-    }
-    return null;
+    borderRadius: getBorderRadius(),
+    ...(palette ? { borderColor: palette.border, backgroundColor: palette.bg } : {}),
   };
 
   return (
@@ -222,58 +212,31 @@ function DraggableTable({
       onPointerDown={handlePointerDown}
       className={cn(
         themeConfig.table.default,
-        'p-3 relative flex flex-col items-center justify-center select-none touch-none',
+        'relative flex flex-col items-center justify-center overflow-hidden p-2 select-none touch-none',
         isOver && canDropHere ? themeConfig.table.dropTarget : '',
         isOver && !canDropHere ? themeConfig.table.full : '',
-        isDragging ? themeConfig.table.dragging : 'z-0',
-        isSelected ? 'ring-4 ring-emerald-500' : ''
+        isDragging ? themeConfig.table.dragging : '',
+        // The selection ring itself is drawn by the canvas overlay, which also
+        // carries the resize, rotate and delete controls.
+        isSelected ? 'shadow-xl' : ''
       )}
-      style={{
-        ...tableStyle,
-        borderRadius: getBorderRadius(),
-      }}
+      style={tableStyle}
     >
-      {getSpecialShape()}
+      {isUShape && (
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1/3 border-t-2 border-emerald-600 bg-white/70" />
+      )}
 
-      {/* Controls - Top Right Corner */}
-      <div className="absolute top-1 right-1 flex items-center gap-1 z-20">
-        <button
-          onMouseDown={(e) => e.stopPropagation()}
-          onClick={(e) => {
-            e.stopPropagation();
-            const newRotation = ((table.rotation || 0) + 90) % 360;
-            onRotate(table.id, newRotation);
-          }}
-          className={cn(themeConfig.button.edit, 'h-7 w-7 min-h-0 min-w-0 p-0 flex-shrink-0')}
-          title="Rotate table"
-          aria-label={`Rotate ${table.name}`}
-        >
-          <RotateCw className="w-3.5 h-3.5" />
-        </button>
-        <button
-          onMouseDown={(e) => e.stopPropagation()}
-          onClick={(e) => {
-            e.stopPropagation();
-            onDelete();
-          }}
-          className={cn(themeConfig.button.delete, 'h-7 w-7 min-h-0 min-w-0 p-0 flex-shrink-0')}
-          title="Delete table"
-          aria-label={`Delete ${table.name}`}
-        >
-          <Trash2 className="w-3.5 h-3.5" />
-        </button>
-      </div>
-
-      {/* Table Name - Centered */}
+      {/* Table name — click to rename in place. */}
       <div
         className={cn(
           themeConfig.text.heading,
-          isCocktail ? 'text-xs text-center' : 'text-sm text-center font-bold mb-1',
-          'relative'
+          'relative z-10 max-w-full text-center leading-tight',
+          compact ? 'text-[10px]' : 'text-sm'
         )}
+        style={palette ? { color: palette.border } : undefined}
       >
         {isEditing ? (
-          <div className="flex flex-col gap-1" onClick={(e) => e.stopPropagation()}>
+          <div className="flex flex-col gap-1" data-no-drag onClick={(e) => e.stopPropagation()}>
             <input
               ref={inputRef}
               type="text"
@@ -281,96 +244,95 @@ function DraggableTable({
               onChange={(e) => setEditName(e.target.value)}
               onKeyDown={handleKeyDown}
               onBlur={handleSaveEdit}
-              className="w-full px-2 py-1 text-xs border-2 border-emerald-500 rounded focus:outline-none focus:ring-2 focus:ring-emerald-300"
+              className="w-full rounded border-2 border-emerald-500 px-1 py-0.5 text-xs text-stone-900 focus:outline-none focus:ring-2 focus:ring-emerald-300"
             />
-            {nameError && (
-              <div className="text-xs text-red-600 font-normal">
-                {nameError}
-              </div>
-            )}
+            {nameError && <div className="text-[10px] font-normal text-red-600">{nameError}</div>}
           </div>
         ) : (
           <div
-            className="cursor-pointer hover:bg-emerald-50 rounded px-1 transition-colors"
+            className="cursor-text truncate rounded px-1 font-bold transition-colors hover:bg-emerald-50"
             onClick={handleStartEdit}
-            title="Click to rename"
+            title={locked ? table.name : `${table.name} — click to rename`}
           >
             {table.name}
           </div>
         )}
       </div>
 
-      {/* Capacity Info - Click to show/hide guest list */}
+      {/* Capacity — click to show who is sitting here. */}
       <div
         className={cn(
-          'flex items-center gap-1 cursor-pointer transition-colors',
+          'relative z-10 flex cursor-pointer items-center gap-1 font-medium transition-colors',
           themeConfig.text.body,
-          'font-medium',
-          isCocktail ? 'text-xs' : 'text-sm',
-          `hover:${themeConfig.icon.color.primary}`,
-          showGuestList && table.guests.length > 0 && `${themeConfig.icon.color.primary} font-semibold`
+          compact ? 'text-[10px]' : 'text-sm',
+          showGuestList && table.guests.length > 0 && 'font-semibold'
         )}
         onClick={(e) => {
           e.stopPropagation();
-          if (table.guests.length > 0) {
-            setShowGuestList(!showGuestList);
-          }
+          if (table.guests.length > 0) setShowGuestList((open) => !open);
         }}
+        title={`${freeSeats} seat${freeSeats === 1 ? '' : 's'} free`}
       >
-        <Users className={isCocktail ? 'w-3 h-3' : 'w-4 h-4'} />
-        <span title={`${freeSeats} seat${freeSeats === 1 ? '' : 's'} free`}>
+        <Users className={compact ? 'h-2.5 w-2.5' : 'h-4 w-4'} />
+        <span>
           {seatsUsed}/{table.capacity}
         </span>
-        {table.guests.length > 0 && (
-          <span className="text-xs opacity-80 ml-1 font-normal">
-            {isFull ? '(full)' : `(${freeSeats} free)`}
-          </span>
-        )}
       </div>
 
-      {/* Shape Indicator */}
-      <div className="text-xs opacity-60 mt-1">
-        {table.shape === 'round' && '⭕'}
-        {table.shape === 'square' && '⬜'}
-        {table.shape === 'rectangular' && '▬'}
-        {table.shape === 'oval' && '⬭'}
-        {table.shape === 'u-shape' && '⊓'}
-        {table.shape === 'cocktail' && '○'}
-      </div>
+      {/* Fullness at a glance, so a crowded plan reads without arithmetic. */}
+      {!compact && (
+        <div className="relative z-10 mt-1 h-1.5 w-2/3 overflow-hidden rounded-full bg-stone-200">
+          <div
+            className={cn(
+              'h-full rounded-full transition-[width] duration-200',
+              isOver100 ? 'bg-rose-500' : isFull ? 'bg-amber-500' : 'bg-emerald-500'
+            )}
+            style={{
+              width: `${Math.min(100, (seatsUsed / Math.max(1, table.capacity)) * 100)}%`,
+            }}
+          />
+        </div>
+      )}
 
-      {/* Drop Zone Indicator */}
+      {!compact && (
+        <div className="relative z-10 mt-0.5 text-[10px] opacity-60">
+          {SHAPE_GLYPH[table.shape] ?? SHAPE_GLYPH.round}
+        </div>
+      )}
+
+      {/* Drop feedback */}
       {isOver && (
         <div
           className={cn(
-            'absolute inset-0 border-2 border-dashed pointer-events-none',
-            !isFull ? 'border-green-400 bg-green-100/50' : 'border-red-400 bg-red-100/50'
+            'pointer-events-none absolute inset-0 z-20 border-2 border-dashed',
+            canDropHere ? 'border-green-500 bg-green-100/60' : 'border-red-400 bg-red-100/60'
           )}
           style={{ borderRadius: getBorderRadius() }}
         >
-          <div className="flex items-center justify-center h-full text-xs font-medium">
-            {isFull ? 'Table Full!' : 'Drop Here'}
+          <div className="flex h-full items-center justify-center text-center text-[11px] font-semibold">
+            {canDropHere ? 'Drop here' : 'No room'}
           </div>
         </div>
       )}
 
-      {/* Guest Count Badge - Shows for all tables with guests */}
+      {/* Guest count badge */}
       {table.guests.length > 0 && (
         <div
           className={cn(
-            'absolute -bottom-2 -right-2 text-xs rounded-full w-6 h-6 flex items-center justify-center transition-colors cursor-pointer z-20',
+            'absolute -bottom-2 -right-2 z-20 flex h-6 w-6 cursor-pointer items-center justify-center rounded-full text-xs transition-colors',
             themeConfig.badge.default,
             showGuestList && 'ring-2 ring-emerald-300'
           )}
           onClick={(e) => {
             e.stopPropagation();
-            setShowGuestList(!showGuestList);
+            setShowGuestList((open) => !open);
           }}
         >
           {table.guests.length}
         </div>
       )}
 
-      {/* Guest List Popup - Shows guests on click for all tables */}
+      {/* Who is sitting here */}
       {showGuestList && table.guests.length > 0 && (
         <div
           ref={popupRef}
@@ -378,15 +340,17 @@ function DraggableTable({
           className={cn(
             // Below the table on narrow screens (where `left-full` would push
             // it off the canvas), beside it from `sm` up.
-            'absolute z-50 p-3 rounded-lg shadow-xl w-56',
+            'absolute z-50 w-56 rounded-lg p-3 shadow-xl',
             'left-1/2 top-full mt-2 -translate-x-1/2',
-            'sm:left-full sm:top-0 sm:mt-0 sm:ml-2 sm:translate-x-0 sm:min-w-[220px] sm:w-auto',
+            'sm:left-full sm:top-0 sm:ml-2 sm:mt-0 sm:w-auto sm:min-w-[220px] sm:translate-x-0',
             `${themeConfig.classes.bgCard} border-2 ${themeConfig.classes.borderPrimary}`
           )}
+          // Counter the table's own rotation so the list is always readable.
+          style={{ transform: `rotate(${-(table.rotation || 0)}deg)`, transformOrigin: 'top center' }}
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="flex items-center justify-between mb-2">
-            <div className={`font-bold text-sm ${themeConfig.text.heading}`}>
+          <div className="mb-2 flex items-center justify-between">
+            <div className={`text-sm font-bold ${themeConfig.text.heading}`}>
               {table.name} ({seatsUsed}/{table.capacity} seats)
             </div>
             <button
@@ -394,12 +358,13 @@ function DraggableTable({
                 e.stopPropagation();
                 setShowGuestList(false);
               }}
+              aria-label="Close guest list"
               className={themeConfig.button.cancel}
             >
-              <X className="w-3 h-3" />
+              <X className="h-3 w-3" />
             </button>
           </div>
-          <div className="space-y-1 max-h-48 overflow-y-auto">
+          <div className="max-h-48 space-y-1 overflow-y-auto">
             {table.guests.map((guest) => (
               <DraggableGuest
                 key={guest.id}
@@ -425,7 +390,10 @@ export default React.memo(DraggableTable, (prevProps, nextProps) => {
     prevProps.table.capacity !== nextProps.table.capacity ||
     prevProps.table.positionX !== nextProps.table.positionX ||
     prevProps.table.positionY !== nextProps.table.positionY ||
-    prevProps.table.rotation !== nextProps.table.rotation;
+    prevProps.table.rotation !== nextProps.table.rotation ||
+    prevProps.table.width !== nextProps.table.width ||
+    prevProps.table.height !== nextProps.table.height ||
+    prevProps.table.color !== nextProps.table.color;
 
   // Check if guests array changed
   const guestsChanged =

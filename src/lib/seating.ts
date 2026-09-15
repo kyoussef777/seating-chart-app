@@ -17,6 +17,12 @@ export interface Table {
   positionX: number;
   positionY: number;
   rotation: number;
+  /** Size override in px. Null until someone resizes the table, at which
+   *  point it stops tracking the shape's default. */
+  width?: number | null;
+  height?: number | null;
+  /** Key into TABLE_COLORS. Null = the theme's default table styling. */
+  color?: string | null;
   guests: Guest[];
 }
 
@@ -35,23 +41,95 @@ export interface GuestDragItem {
 export const CANVAS_WIDTH = 2000;
 export const CANVAS_HEIGHT = 1500;
 
-export function getTableDimensions(shape: string) {
-  switch (shape) {
-    case 'round':
-      return { width: 140, height: 140, isCircular: true };
-    case 'square':
-      return { width: 120, height: 120, isCircular: false };
-    case 'rectangular':
-      return { width: 180, height: 100, isCircular: false };
-    case 'oval':
-      return { width: 160, height: 100, isCircular: true };
-    case 'u-shape':
-      return { width: 200, height: 140, isCircular: false };
-    case 'cocktail':
-      return { width: 80, height: 80, isCircular: true };
-    default:
-      return { width: 140, height: 140, isCircular: true };
-  }
+/** Every shape the UI offers. The API validates against this same list: it
+ *  used to allow only round and rectangular, so choosing any other shape in
+ *  the Add Table dialog silently created a round table. */
+export const TABLE_SHAPES = [
+  'round',
+  'rectangular',
+  'square',
+  'oval',
+  'u-shape',
+  'cocktail',
+] as const;
+
+export type TableShape = (typeof TABLE_SHAPES)[number];
+
+export function isTableShape(value: unknown): value is TableShape {
+  return typeof value === 'string' && (TABLE_SHAPES as readonly string[]).includes(value);
+}
+
+/** Human labels for the shape picker, kept beside the list so adding a shape
+ *  is one edit rather than three. */
+export const TABLE_SHAPE_LABELS: Record<TableShape, string> = {
+  round: 'Round',
+  rectangular: 'Rectangular',
+  square: 'Square',
+  oval: 'Oval',
+  'u-shape': 'U-Shape',
+  cocktail: 'Cocktail',
+};
+
+/** Seats a shape usually holds, used to prefill the capacity field. */
+export const DEFAULT_TABLE_CAPACITY: Record<TableShape, number> = {
+  round: 8,
+  rectangular: 10,
+  square: 6,
+  oval: 12,
+  'u-shape': 16,
+  cocktail: 4,
+};
+
+export const TABLE_CAPACITY_MIN = 1;
+export const TABLE_CAPACITY_MAX = 50;
+
+/** Resize limits for a table, in px. */
+export const TABLE_MIN_SIZE = 60;
+export const TABLE_MAX_SIZE = 600;
+
+/** Accent colours a table can be tinted with, so an organiser can group
+ *  tables by family, course or room without reading every name. */
+export const TABLE_COLORS: Record<string, { label: string; border: string; bg: string; dot: string }> = {
+  emerald: { label: 'Emerald', border: '#059669', bg: '#ffffff', dot: '#059669' },
+  slate: { label: 'Slate', border: '#475569', bg: '#f8fafc', dot: '#475569' },
+  rose: { label: 'Rose', border: '#e11d48', bg: '#fff1f2', dot: '#e11d48' },
+  amber: { label: 'Amber', border: '#d97706', bg: '#fffbeb', dot: '#d97706' },
+  violet: { label: 'Violet', border: '#7c3aed', bg: '#f5f3ff', dot: '#7c3aed' },
+  sky: { label: 'Sky', border: '#0284c7', bg: '#f0f9ff', dot: '#0284c7' },
+  teal: { label: 'Teal', border: '#0d9488', bg: '#f0fdfa', dot: '#0d9488' },
+};
+
+const SHAPE_DEFAULT_SIZE: Record<TableShape, { width: number; height: number; isCircular: boolean }> = {
+  round: { width: 140, height: 140, isCircular: true },
+  square: { width: 120, height: 120, isCircular: false },
+  rectangular: { width: 180, height: 100, isCircular: false },
+  oval: { width: 160, height: 100, isCircular: true },
+  'u-shape': { width: 200, height: 140, isCircular: false },
+  cocktail: { width: 80, height: 80, isCircular: true },
+};
+
+/**
+ * Footprint of a table on the floor plan.
+ *
+ * `size` carries a table's own width/height override; either side may be null,
+ * in which case that side falls back to the shape's default. Everything that
+ * positions, clamps or hit-tests a table goes through here, so a resized table
+ * is bounded by its real footprint rather than its shape's stock one.
+ */
+export function getTableDimensions(
+  shape: string,
+  size?: { width?: number | null; height?: number | null } | null
+) {
+  const base = SHAPE_DEFAULT_SIZE[shape as TableShape] ?? SHAPE_DEFAULT_SIZE.round;
+  const width = size?.width != null && size.width > 0 ? size.width : base.width;
+  const height = size?.height != null && size.height > 0 ? size.height : base.height;
+  return { width, height, isCircular: base.isCircular };
+}
+
+/** The stock footprint for a shape, ignoring any override — what "reset size"
+ *  goes back to. */
+export function getDefaultTableDimensions(shape: string) {
+  return getTableDimensions(shape, null);
 }
 
 /** Seats consumed by a set of guests, counting each guest's whole party. */
@@ -103,9 +181,10 @@ export function clampToCanvas(
   x: number,
   y: number,
   shape: string,
-  bounds: CanvasSize = DEFAULT_CANVAS
+  bounds: CanvasSize = DEFAULT_CANVAS,
+  size?: { width?: number | null; height?: number | null } | null
 ) {
-  const { width, height } = getTableDimensions(shape);
+  const { width, height } = getTableDimensions(shape, size);
   return clampBox(x, y, width, height, bounds);
 }
 
@@ -129,6 +208,9 @@ export function groupGuests(rawTables: Table[], guests: Guest[]) {
   const tables = rawTables.map((t) => ({
     ...t,
     rotation: t.rotation || 0,
+    width: t.width ?? null,
+    height: t.height ?? null,
+    color: t.color ?? null,
     guests: (byTable.get(t.id) || []).sort(byName),
   }));
 

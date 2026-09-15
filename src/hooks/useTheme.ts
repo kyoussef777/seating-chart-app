@@ -1,8 +1,18 @@
 import { theme, themeClasses, combineThemeClasses } from '@/lib/theme';
 
-/** Minimum comfortable tap target on touch screens (44px), relaxed on desktop. */
-const touch = 'min-h-11 sm:min-h-0';
-const iconTouch = 'inline-flex items-center justify-center min-h-11 min-w-11 sm:min-h-0 sm:min-w-0';
+/**
+ * Minimum comfortable tap target on touch screens (44px), relaxed on desktop.
+ *
+ * The `sm:` release is by viewport width, which misses tablets: an iPad is
+ * 768px wide and entirely finger-driven, so every control shrank to its
+ * compact desktop size on exactly the device that needs the big one. The
+ * `sm:pointer-coarse:` half puts the floor back wherever the pointer is
+ * actually coarse, at any width.
+ */
+const touch = 'min-h-11 sm:min-h-0 sm:pointer-coarse:min-h-11';
+const iconTouch =
+  'inline-flex items-center justify-center min-h-11 min-w-11 sm:min-h-0 sm:min-w-0 ' +
+  'sm:pointer-coarse:min-h-11 sm:pointer-coarse:min-w-11';
 
 export function useTheme() {
   return {
@@ -54,8 +64,13 @@ export function useTheme() {
     },
 
     table: {
-      default: `${theme.components.table.default} cursor-move select-none min-w-[140px]`,
-      dragging: `${theme.components.table.dragging} z-10`,
+      // No min-width: the floor plan sizes a table from its shape and its own
+      // width/height override, and a 140px floor forced every cocktail (80px)
+      // and square (120px) table to draw wider than the footprint used for
+      // clamping, hit-testing and the mini-map. DraggableTable sets the size,
+      // cursor and stacking inline.
+      default: `${theme.components.table.default} select-none`,
+      dragging: theme.components.table.dragging,
       dropTarget: theme.components.table.dropTarget,
       full: theme.components.table.full,
     },

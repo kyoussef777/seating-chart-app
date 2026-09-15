@@ -15,6 +15,13 @@
       "when": 1788916047183,
       "tag": "0001_fuzzy_ravenous",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1789431568267,
+      "tag": "0002_overjoyed_adam_warlock",
+      "breakpoints": true
     }
   ]
 }

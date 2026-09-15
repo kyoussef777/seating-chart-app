@@ -3,6 +3,7 @@ import { db } from '@/lib/db';
 import { shapes } from '@/lib/schema';
 import { eq } from 'drizzle-orm';
 import { getSession } from '@/lib/auth';
+import { normalizeShape } from '@/lib/layout-objects';
 
 // GET all shapes
 export async function GET() {
@@ -34,19 +35,9 @@ export async function POST(request: NextRequest) {
     await db.delete(shapes);
 
     if (shapeData.length > 0) {
-      // Let database generate UUIDs, ignore frontend IDs
-      await db.insert(shapes).values(
-        shapeData.map((shape) => ({
-          type: shape.type,
-          x: shape.x,
-          y: shape.y,
-          width: shape.width,
-          height: shape.height,
-          rotation: shape.rotation,
-          color: shape.color,
-          label: shape.label || null,
-        }))
-      );
+      // Let database generate UUIDs, ignore frontend IDs. See the labels route:
+      // the shared normaliser is what keeps a bad payload out of the table.
+      await db.insert(shapes).values(shapeData.map(normalizeShape));
     }
 
     return NextResponse.json({ success: true });

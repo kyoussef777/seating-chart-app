@@ -45,9 +45,13 @@ The application uses Drizzle ORM with these tables:
 - `users` - Admin authentication
 - `eventSettings` - Event configuration (template, name, kicker, venue, date,
   homepage text, search-closed message, search toggle, address-collection toggle)
-- `tables` - Seating arrangements with position coordinates
+- `tables` - Seating arrangements: position, rotation, an optional width/height
+  size override (null = the shape's default footprint) and an optional accent
+  colour key
 - `guests` - Guest information, party size, optional table assignment
-- `labels`, `shapes`, `referenceObjects` - Floor-plan decoration layer
+- `labels`, `shapes`, `referenceObjects` - Floor-plan decoration layer, each
+  with its own styling columns (label ink/backdrop/weight/alignment, shape
+  fill/opacity/border, object caption and tint)
 
 Key relationship: `guests.tableId` → `tables.id` (nullable, cascades to null on delete)
 
@@ -61,8 +65,11 @@ Key relationship: `guests.tableId` → `tables.id` (nullable, cascades to null o
 **Admin tabs:** Seating Chart (spatial floor plan), Roster (who is sitting with
 whom — drag guests between tables and the unassigned list), Guest List, Event
 Settings (template picker, event copy, guest-facing toggles, live preview),
-User Management. Both seating views share `src/lib/seating.ts`, which
-owns capacity maths, canvas bounds and assignment persistence.
+User Management. Both seating views share `src/lib/seating.ts`, which owns
+capacity maths, canvas bounds, the table shape/colour/size vocabulary and
+assignment persistence. `TABLE_SHAPES` there is the single allow-list: the API
+used to accept only round and rectangular, so picking any other shape in the
+Add Table dialog silently created a round table.
 
 **API Routes:**
 - `/api/auth/*` - JWT authentication (login, logout, session validation)
@@ -77,18 +84,73 @@ owns capacity maths, canvas bounds and assignment persistence.
 ### Key Features
 
 **Seating Chart (`/src/components/admin/SeatingChart.tsx`):**
-- Tables, labels, shapes and reference objects all move through one pointer
-  drag path (mouse, pen and touch), so positions track the cursor live at any
-  zoom. Only tables persist on release; the rest autosave (below).
-- Drag empty canvas to pan, Ctrl/⌘+wheel or pinch to zoom around the cursor,
-  and a fit button frames the plan. Transform-based zoom, 20%–300%.
-- The edit zone (floor-plan size) is configurable in px and can be locked, so a
-  stray drag cannot move anything. Both live in localStorage preferences with
-  grid/snap/mini-map.
-- Layout objects autosave to the database ~800ms after any change. The ids come
-  back as UUIDs, so anything keyed off the `label-`/`shape-`/`ref-` prefixes
-  breaks for saved items — match against the collections instead.
-- Visual capacity management and guest assignments
+
+Everything selectable on the canvas — tables, labels, shapes, reference objects
+— is projected into one `CanvasItem` view (`floorplan/types.ts`), and every
+gesture works against that rather than against four different record shapes.
+
+- **Gestures.** One pointer path (mouse, pen, touch) covers move, resize,
+  rotate, marquee select and pan; a single window-level loop interprets
+  whichever is in flight, so releasing outside the canvas still ends cleanly.
+  Dragging moves the whole selection.
+- **Tools.** Select (V) drag-selects a band; Pan (H), a held Space, a middle
+  drag, or any touch drag pans. Ctrl/⌘+wheel and pinch zoom at the cursor,
+  20%–300%; F frames the plan.
+- **Selection chrome** lives in one overlay layer above every item
+  (`floorplan/SelectionOverlay.tsx`), never nested inside the item. Nesting it
+  is what put the old font-size buttons *inside* a label's contenteditable, so
+  blurring a selected label appended "A-A+" to its text. Grips hide when the
+  item is smaller on screen than the grips themselves, or they blanket it and
+  swallow its own clicks.
+- **Inspector** (`floorplan/Inspector.tsx`) edits the selected item by number:
+  table name/shape/seats/size/accent, label text/size/weight/alignment/backdrop/
+  ink, shape fill/opacity/border, object caption/tint, and rotation for all.
+- **Undo/redo** (Ctrl/⌘+Z, Ctrl/⌘+Shift+Z) covers layout: moves, resizes,
+  rotations, alignment, arranging and styling. Adding or deleting a *table*, and
+  seating a guest, are server-side operations and sit outside the stack. Restore
+  diffs are computed from `tablesRef`, not inside a `setTables` updater — React
+  defers that callback, so anything collected in it is empty by the time the
+  writes go out.
+- **Stacking** is explicit (`LAYER`): shapes, then reference objects, then
+  tables, then labels. Labels caption what they sit on, so they must stay on
+  top; relying on DOM order hid a label behind any table it overlapped.
+- The edit zone (floor-plan size) is configurable in px and can be locked.
+  Shrinking it pulls stranded items back inside rather than leaving them
+  invisible and unselectable. Preferences (grid, snap, guides, mini-map, lock,
+  tool, floor size) live in localStorage.
+- **Layout objects autosave** ~800ms after any change, and `lastSavedLayoutRef`
+  only advances once the writes come back OK — marking it up front meant a
+  rejected save was recorded as written and never retried. The ids come back as
+  UUIDs, so anything keyed off the `label-`/`shape-`/`ref-` prefixes breaks for
+  saved items — match against the collections instead.
+- **Mini-map** (`floorplan/MiniMap.tsx`) draws every item to scale, frames the
+  visible region, and clicking or dragging it moves the view.
+- **Touch.** Tap targets use Tailwind's `pointer-coarse:` variant rather than a
+  width breakpoint: `sm:` releases the 44px floor at 640px, which is exactly
+  where a tablet sits — an iPad is 768px wide and entirely finger-driven, so
+  every control had shrunk to desktop metrics on the device that needed the big
+  one. On a phone the editing controls live in a capped, scrolling drawer so
+  they cannot push the plan off the first screen; align and distribute are
+  hidden there because they need a multi-selection and the marquee that makes
+  one is a pointer gesture. On-canvas chrome is sized in screen pixels, so it
+  is counter-scaled against the zoom and nudged back inside the plan — zoomed
+  out, the buttons are wider than the item they belong to and would otherwise
+  hang off the edge.
+
+**Floor-plan geometry (`/src/lib/floorplan.ts`):**
+- Pure, DOM-free and unit tested: rotation-aware resize (the delta is
+  interpreted in the box's own frame, so a rotated item grows along the edge you
+  grabbed), angle snapping, marquee hit-testing, align/distribute across every
+  item kind, four auto-arrange layouts, alignment guides, and bounds clamping.
+- Coordinates are always floor-plan pixels; callers divide pointer deltas by the
+  zoom before passing them in.
+
+**Layout objects (`/src/lib/layout-objects.ts`):**
+- Types, palettes, presets and normalisers for labels, shapes and reference
+  objects, shared by the canvas and the three `/api/layout/*` routes so a
+  malformed payload cannot become a malformed row. Deliberately React-free so
+  route handlers can import it; the lucide icon per object type lives in
+  `floorplan/icons.ts`.
 
 **Theme System (`/src/lib/theme.ts` + `/src/hooks/useTheme.ts`):**
 - Centralized theme configuration for easy color scheme changes
@@ -162,6 +224,11 @@ React DnD (HTML5Backend) is now only used for **guests**: dragging a guest onto
 a table, with capacity refused up front via `canSeat()`. Everything positional
 on the canvas uses pointer events instead — HTML5 drag gives a ghost image, no
 touch support and only a final drop position.
+
+Keyboard shortcuts are gated on `isEditableTarget()`, which covers
+contenteditable as well as input/textarea/select. Without the contenteditable
+case, typing into a label fired the single-key shortcuts behind it (a "g"
+toggled the grid, an "l" locked the plan).
 
 ### Database Migrations
 
