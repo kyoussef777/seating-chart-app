@@ -96,6 +96,18 @@ export interface EventTemplate {
   displayCase: 'as-typed' | 'uppercase';
   /** Letter spacing for the display face. */
   displayTracking: string;
+  /**
+   * How the event name breaks across lines. `last-word` drops the final word
+   * to a line of its own; `couple` stacks two names around a set-apart
+   * ampersand ("Mira / & / Kamal") and falls back to balanced lines when the
+   * name is not a couple.
+   */
+  titleLayout: 'last-word' | 'couple';
+  /**
+   * Average width of one display character in ems, tracking and case
+   * included — measured from the loaded face, used to size the name to fit.
+   */
+  displayCharEm: number;
   palette: TemplatePalette;
   shape: TemplateShape;
   fonts: TemplateFonts;
@@ -114,6 +126,8 @@ export const EVENT_TEMPLATES: Record<TemplateId, EventTemplate> = {
     description: 'Enchanted garden — hanging canopy, meadow and butterflies.',
     displayCase: 'as-typed',
     displayTracking: 'normal',
+    titleLayout: 'last-word',
+    displayCharEm: 0.4,
     fonts: { display: FONT_SCRIPT, label: FONT_CORMORANT, body: FONT_PLAYFAIR },
     shape: { input: '9999px', button: '9999px', panel: '22px' },
     palette: {
@@ -156,6 +170,8 @@ export const EVENT_TEMPLATES: Record<TemplateId, EventTemplate> = {
     description: 'Ivory and gold — a quiet framed card, no photograph needed.',
     displayCase: 'uppercase',
     displayTracking: '.12em',
+    titleLayout: 'couple',
+    displayCharEm: 0.78,
     fonts: { display: FONT_PLAYFAIR, label: FONT_CORMORANT, body: FONT_CORMORANT },
     shape: { input: '4px', button: '4px', panel: '2px' },
     palette: {
@@ -198,6 +214,8 @@ export const EVENT_TEMPLATES: Record<TemplateId, EventTemplate> = {
     description: 'Photograph backdrop behind a soft beige veil — the original look.',
     displayCase: 'as-typed',
     displayTracking: '.02em',
+    titleLayout: 'last-word',
+    displayCharEm: 0.47,
     fonts: { display: FONT_FLEUR, label: FONT_PLAYFAIR, body: FONT_PLAYFAIR },
     shape: { input: '8px', button: '8px', panel: '12px' },
     palette: {

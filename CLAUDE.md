@@ -177,7 +177,24 @@ gesture works against that rather than against four different record shapes.
   data, autocomplete, table lookup, address capture.
 - `src/components/guest/PortalPanels.tsx` — header, search, result and address
   panels, styled from the template's palette. Shared by every template.
-- `src/components/guest/templates/*` — scenery and frame only.
+- `src/components/guest/templates/*` — scenery and frame only. A template may
+  pass `variant="inset"` to the result and address panels to draw them inside
+  its own card (the wedding does) instead of as separate boxes below it.
+- Every shared panel element carries a `portal-*` class with no styles of its
+  own; a template's motion targets them from globals.css under its root class
+  (`.wedding-portal .portal-title-line`), so choreography never leaks between
+  templates. Animate only opacity/transform/filter so nothing reflows, and keep
+  a `prefers-reduced-motion` block that switches it all off.
+
+**Display text sizing (`/src/lib/display-text.ts`):**
+- Event and table names are free text, so they are sized to fit rather than
+  assumed short: `fitFontSize()` returns a `clamp(…, calc(100cqi / n), …)`
+  computed from the longest line of a balanced wrap, which needs the parent to
+  have `container-type: inline-size`. Never set display text `nowrap` — that is
+  what pushed long wedding names off both edges of the card.
+- `splitCouple()` finds "A & B" / "A and B" for the `couple` title layout, which
+  sets the joiner on its own line. `displayCharEm` on each template is measured
+  from the loaded face; re-measure it if a template's display font changes.
 
 **Guest list sorting (`/src/lib/guest-sort.ts`):**
 - `queryGuests()` filters (search, seated/unassigned/missing phone or address,
