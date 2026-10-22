@@ -19,7 +19,7 @@ import {
  * The whole exchange — name, search, table, address — stays on the one
  * moulded panel, so the answer appears where the guest is already looking.
  * Motion lives in globals.css under `.wedding-portal`: the frame settles, the
- * portico draws itself, the copy rises line by line down to the search box,
+ * estate draws itself, the copy rises line by line down to the search box,
  * and on wider screens a chandelier sways and glints above the card. All of it
  * is off under reduced motion.
  */
@@ -27,27 +27,83 @@ import {
 const template = EVENT_TEMPLATES.wedding;
 const { palette } = template;
 
-/** The estate's portico: pediment and oculus over four two-storey columns. */
-function Portico() {
-  const columns = [22, 42, 78, 98];
+/**
+ * The estate seen from the brick drive: a long white house under a hipped
+ * roof, two chimneys, lower wings either side, black shutters on every window
+ * and the two-storey columned portico at the centre, flat-topped with a
+ * balustrade — a country house, not a temple front. Hedges line the facade
+ * and the drive opens towards the viewer.
+ */
+function Estate() {
+  const columns = [100, 113, 127, 140];
+  // [centre x, top, height] for each window, both storeys of every block.
+  const windows: [number, number, number][] = [
+    [82, 40, 11], [158, 40, 11], [82, 62, 13], [158, 62, 13],
+    [32, 51, 9], [52, 51, 9], [188, 51, 9], [208, 51, 9],
+    [32, 66, 11], [52, 66, 11], [188, 66, 11], [208, 66, 11],
+  ];
+  const hedges = [30, 44, 58, 182, 196, 210];
+  const balusters = Array.from({ length: 12 }, (_, i) => 97 + i * 4.2);
+
   return (
-    <svg className="wed-crest" width="104" height="58" viewBox="0 0 120 66" aria-hidden>
-      <g fill="none" stroke={palette.accent} strokeWidth="1" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M8 24 L60 5 L112 24 Z" pathLength={1} />
-        <path d="M19 21.5 L60 9.5 L101 21.5" pathLength={1} opacity=".6" />
-        <circle cx="60" cy="16" r="3.2" pathLength={1} />
-        <path d="M6 24 H114 V28.5 H6 Z" pathLength={1} />
+    <svg className="wed-crest" viewBox="0 0 240 100" aria-hidden width="100%" style={{ maxWidth: 210 }}>
+      <g fill="none" stroke={palette.accent} strokeWidth=".9" strokeLinecap="round" strokeLinejoin="round">
+        {/* Roofs and chimneys */}
+        <path d="M62 30 L88 14 H152 L178 30 Z" pathLength={1} />
+        <path d="M97 15 V7 H103 V15 M137 15 V7 H143 V15" pathLength={1} />
+        <path d="M14 44 L28 36 H70 M226 44 L212 36 H170 M14 44 H70 M170 44 H226" pathLength={1} />
+        {/* Walls */}
+        <path d="M70 30 V84 M170 30 V84 M18 44 V84 M222 44 V84" pathLength={1} />
+        {/* Windows, each with its pair of black shutters */}
+        {windows.map(([x, top, h]) => (
+          <g key={`${x}-${top}`}>
+            <path d={`M${x - 3} ${top} h6 v${h} h-6 Z M${x} ${top} v${h}`} pathLength={1} />
+            <rect
+              className="wed-crest-fill"
+              x={x - 5.6}
+              y={top}
+              width="2.1"
+              height={h}
+              fill={palette.heading}
+              stroke="none"
+              fillOpacity=".72"
+            />
+            <rect
+              className="wed-crest-fill"
+              x={x + 3.5}
+              y={top}
+              width="2.1"
+              height={h}
+              fill={palette.heading}
+              stroke="none"
+              fillOpacity=".72"
+            />
+          </g>
+        ))}
+        {/* Portico: balustrade, entablature and four two-storey columns */}
+        <path d="M93 24.5 H147 M93 30.5 H147" pathLength={1} />
+        <path d={balusters.map((x) => `M${x} 25 V30`).join(' ')} pathLength={1} opacity=".8" />
+        <path d="M91 31 H149 V35.5 H91 Z" pathLength={1} />
         {columns.map((x) => (
           <path
             key={x}
-            d={`M${x - 4.2} 30.5 H${x + 4.2} M${x - 2.4} 30.5 V54.5 M${x + 2.4} 30.5 V54.5 M${x - 3.8} 54.5 H${x + 3.8}`}
+            d={`M${x - 3.2} 36.5 H${x + 3.2} M${x - 1.5} 36.5 V82 M${x + 1.5} 36.5 V82 M${x - 2.8} 82 H${x + 2.8}`}
             pathLength={1}
           />
         ))}
-        {/* Shuttered windows in the outer bays, the door in the centre. */}
-        <path d="M29 36 h6 v11 h-6 Z M85 36 h6 v11 h-6 Z" pathLength={1} opacity=".75" />
-        <path d="M55 54.5 V45 A5 5 0 0 1 65 45 V54.5" pathLength={1} />
-        <path d="M8 56.5 H112 M4 60 H116 M0 63.5 H120" pathLength={1} opacity=".8" />
+        {/* Upper window and the fanlit front door between the centre columns */}
+        <path d="M116.5 43 h7 v10 h-7 Z" pathLength={1} />
+        <path d="M115.5 84 V69 A4.5 4.5 0 0 1 124.5 69 V84 M120 64.5 V69" pathLength={1} />
+        {/* Steps, ground and the brick drive opening towards us */}
+        <path d="M107 84 H133 M103 87 H137" pathLength={1} />
+        <path d="M6 84 H234" pathLength={1} opacity=".7" />
+        <path d="M107 88 C 98 93, 80 97, 58 99.5 M133 88 C 142 93, 160 97, 182 99.5" pathLength={1} opacity=".6" />
+      </g>
+      {/* Clipped boxwood along the front garden */}
+      <g className="wed-crest-fill" fill={palette.dividerLeaf} fillOpacity=".75">
+        {hedges.map((x) => (
+          <ellipse key={x} cx={x} cy="81" rx="6" ry="3.6" />
+        ))}
       </g>
     </svg>
   );
@@ -241,8 +297,8 @@ export default function WeddingTemplate({ portal }: { portal: GuestPortal }) {
               <Rosette className="-bottom-2 -right-2" />
             </div>
 
-            <div className="mb-4 flex justify-center sm:mb-5">
-              <Portico />
+            <div className="mx-auto mb-4 flex w-[78%] max-w-[210px] justify-center sm:mb-5">
+              <Estate />
             </div>
 
             <div

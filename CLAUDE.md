@@ -187,8 +187,15 @@ gesture works against that rather than against four different record shapes.
   clipped the suggestion list) — use `overflow-x-clip`, and put scenery in its
   own `fixed`, clipped layer.
 - The wedding template is styled after the Park Savoy Estate (Florham Park,
-  NJ): white Carrara marble, gilt boiserie panel with rosettes, a line-drawn
-  portico crest, and a crystal chandelier above the card on wider screens.
+  NJ): white Carrara marble, gilt boiserie panel with rosettes, a line drawing
+  of the mansion itself (hipped roof, wings, black-shuttered windows, the flat-
+  topped two-storey columned portico, hedges and brick drive — a pediment and
+  steps read as a courthouse), and a crystal chandelier on wider screens.
+- Site icons and the link preview are the couple's monogram on ivory, via Next's
+  file convention in `src/app/` (`favicon.ico`, `icon.png`, `apple-icon.png`,
+  `opengraph-image.png` + `.alt.txt`). File-based images override the
+  `openGraph.images` in metadata. Keep them on an opaque background: dark ink
+  on transparency vanishes in dark-mode tabs and message previews.
 - Every shared panel element carries a `portal-*` class with no styles of its
   own; a template's motion targets them from globals.css under its root class
   (`.wedding-portal .portal-title-line`), so choreography never leaks between
