@@ -28,69 +28,55 @@ const template = EVENT_TEMPLATES.wedding;
 const { palette } = template;
 
 /**
- * The Park Savoy's front, drawn from the entrance court: a long two-storey
- * clapboard house under a low hipped roof, black shutters on every window,
- * and the deep flat-roofed porch on four square pillars with a dentil cornice.
- * Under it, a lantern hangs over the front door and an iron Juliet balcony;
- * in front, the tiered fountain in its round brick court, boxwood hedges and
- * mums.
+ * The Park Savoy's front, laid out after the estate's illustrated print: the
+ * two-storey main house under a low hipped roof, its columned portico capped
+ * with a hipped roof of its own, tall piers where the house meets
+ * the single-storey end wings, and lattice railings around the wings' roof
+ * terraces. Black shutters throughout, the Juliet balcony and front door at
+ * the centre and the tiered fountain before it. Kept to plain lines.
  *
  * Lit as it is on a wedding night: once the lines are drawn the windows warm
- * up one after another, the porch lantern glows, and the fairy lights wound
- * through the boxwood twinkle.
+ * up one after another and the porch lantern glows.
  */
 function Estate() {
-  const pillars = [64, 99, 141, 176];
-  // [centre x, top, height] for each window, both storeys.
+  const columns = [88, 106, 134, 152];
+  // [centre x, top, height] for each window of the main house and wings.
   const windows: [number, number, number][] = [
-    [26, 47, 10], [44, 47, 10], [81, 47, 10], [159, 47, 10], [196, 47, 10], [214, 47, 10],
-    [26, 63, 12], [44, 63, 12], [81, 63, 12], [159, 63, 12], [196, 63, 12], [214, 63, 12],
+    [58, 45, 10], [74, 45, 10], [97, 45, 10], [143, 45, 10], [166, 45, 10], [182, 45, 10],
+    [58, 62, 12], [74, 62, 12], [97, 62, 12], [143, 62, 12], [166, 62, 12], [182, 62, 12],
+    [13, 66, 11], [29, 66, 11], [211, 66, 11], [227, 66, 11],
   ];
-  const siding = Array.from({ length: 8 }, (_, i) => 44 + i * 5);
-  const dentils = Array.from({ length: 33 }, (_, i) => 52 + i * 4.25);
-  const hedges: [number, number, number][] = [
-    // [x, y, width]
-    [34, 80, 26], [70, 81, 22], [148, 81, 22], [180, 80, 26],
-  ];
-  const fairyLights = hedges.flatMap(([x, y, w]) =>
-    Array.from({ length: Math.floor((w - 3) / 3.2) }, (_, i) => [x + 2 + i * 3.2, y + (i % 2 ? 4.2 : 1.8)] as const)
-  );
-  const mums: [number, number, string][] = [
-    [14, 89, '#C98B8B'], [21, 91, '#D9B866'], [28, 89, '#C98B8B'],
-    [212, 89, '#D9B866'], [219, 91, '#C98B8B'], [226, 89, '#D9B866'],
-  ];
+  const dentils = Array.from({ length: 19 }, (_, i) => 83 + i * 4.11);
+  // The wings' roof terraces: posts, rails and a lattice band between them.
+  const lattice = (x0: number, x1: number) => {
+    const posts = Array.from({ length: Math.round((x1 - x0) / 9) + 1 }, (_, i) => x0 + ((x1 - x0) * i) / Math.round((x1 - x0) / 9));
+    const cross = Array.from({ length: Math.floor((x1 - x0) / 3) }, (_, i) => {
+      const x = x0 + i * 3;
+      return `M${x} 55.5 l3 3 M${x + 3} 55.5 l-3 3`;
+    });
+    return `M${x0} 53.5 H${x1} M${x0} 59 H${x1} ${posts.map((x) => `M${x} 52 V59`).join(' ')} ${cross.join(' ')}`;
+  };
 
   return (
-    <svg className="wed-crest" viewBox="0 0 240 112" aria-hidden width="100%" style={{ maxWidth: 230 }}>
+    <svg className="wed-crest" viewBox="0 0 240 104" aria-hidden width="100%" style={{ maxWidth: 240 }}>
       <defs>
         <radialGradient id="wed-lantern-glow">
           <stop offset="0" stopColor="#F6DC8E" stopOpacity=".9" />
           <stop offset="1" stopColor="#F6DC8E" stopOpacity="0" />
         </radialGradient>
       </defs>
-      <g className="wed-crest-fill" fill={palette.dividerLeaf} fillOpacity=".75">
-        {hedges.map(([x, y, w]) => (
-          <rect key={x} x={x} y={y} width={w} height={87 - y} rx={(87 - y) / 2} />
-        ))}
-      </g>
-      <g className="wed-crest-fill" fill="#F7E2A0">
-        {fairyLights.map(([x, y], i) => (
-          <circle key={`${x}-${y}`} className="wed-twinkle" cx={x} cy={y} r=".8" style={{ ['--i' as string]: i }} />
-        ))}
-      </g>
-      <circle className="wed-lantern" cx="120" cy="44" r="7" fill="url(#wed-lantern-glow)" />
-      <g className="wed-crest-fill" fillOpacity=".8">
-        {mums.map(([x, y, c]) => (
-          <circle key={`${x}-${y}`} cx={x} cy={y} r="2.6" fill={c} />
-        ))}
-      </g>
 
-      <g fill="none" stroke={palette.accent} strokeWidth=".9" strokeLinecap="round" strokeLinejoin="round">
-        {/* House: low hipped roof over a long clapboard front */}
-        <path d="M8 40 L24 31 H216 L232 40 Z" pathLength={1} />
-        <path d="M12 40 V86 M228 40 V86" pathLength={1} />
-        <path d={siding.map((y) => `M12 ${y} H228`).join(' ')} pathLength={1} opacity=".18" />
-        {/* Windows with their black shutters */}
+      <circle className="wed-lantern" cx="120" cy="39" r="6" fill="url(#wed-lantern-glow)" />
+
+      <g fill="none" stroke={palette.accent} strokeWidth=".85" strokeLinecap="round" strokeLinejoin="round">
+        {/* Main house: low hipped roof either side of the portico */}
+        <path d="M46 40 L58 31 H84 M194 40 L182 31 H156 M46 40 H84 M156 40 H194 M50 40 V89 M190 40 V89" pathLength={1} />
+        {/* End wings with their lattice-railed roof terraces */}
+        <path d="M2 60 H44 M196 60 H238 M4 60 V89 M236 60 V89" pathLength={1} />
+        <path d={`${lattice(4, 40)} ${lattice(200, 236)}`} pathLength={1} opacity=".75" strokeWidth=".6" />
+        {/* Piers where the wings meet the house */}
+        <path d="M40 51 H50 V89 H40 Z M190 51 H200 V89 H190 Z" pathLength={1} />
+        {/* Windows, each with its pair of black shutters; hoods on the lower row */}
         {windows.map(([x, top, h], i) => (
           <g key={`${x}-${top}`}>
             <rect
@@ -105,13 +91,23 @@ function Estate() {
               style={{ ['--i' as string]: i }}
             />
             <path
-              // Lower windows carry a small hood above them.
-              d={`M${x - 3} ${top} h6 v${h} h-6 Z M${x - 3} ${top + h / 2} h6${top > 55 ? ` M${x - 4.6} ${top - 2} h9.2` : ''}`}
+              d={`M${x - 3} ${top} h6 v${h} h-6 Z M${x - 3} ${top + h / 2} h6 M${x} ${top} v${h}${top > 55 ? ` M${x - 4.6} ${top - 2} h9.2` : ''}`}
               pathLength={1}
             />
             <rect className="wed-crest-fill" x={x - 5.6} y={top} width="2.1" height={h} fill={palette.heading} stroke="none" fillOpacity=".75" />
             <rect className="wed-crest-fill" x={x + 3.5} y={top} width="2.1" height={h} fill={palette.heading} stroke="none" fillOpacity=".75" />
           </g>
+        ))}
+        {/* Portico: its own low hipped roof, dentil cornice and four columns */}
+        <path d="M80 24 L90 17 H150 L160 24" pathLength={1} />
+        <path d="M78 24 H162 M80 27 H160 M81 34 H159 M81 27 V34 M159 27 V34" pathLength={1} />
+        <path d={dentils.map((x) => `M${x} 27 V29`).join(' ')} pathLength={1} opacity=".7" />
+        {columns.map((x) => (
+          <path
+            key={x}
+            d={`M${x - 4} 34 H${x + 4} M${x - 2.8} 35.5 V82 M${x + 2.8} 35.5 V82 M${x - 4.2} 82 H${x + 4.2} V86 H${x - 4.2} Z`}
+            pathLength={1}
+          />
         ))}
         {/* Centre bay: French door and Juliet balcony, front door and lamps */}
         <rect
@@ -119,38 +115,26 @@ function Estate() {
           x="115"
           y="45"
           width="10"
-          height="13"
+          height="12"
           fill="#F2D48A"
           fillOpacity=".42"
           stroke="none"
           style={{ ['--i' as string]: windows.length }}
         />
-        <path d="M115 45 h10 v13 h-10 Z M120 45 v13" pathLength={1} />
-        <path d={`M112 58.5 H128 M112 53 H128 ${[114, 117, 120, 123, 126].map((x) => `M${x} 53 V58.5`).join(' ')}`} pathLength={1} />
-        <path d="M115 86 V68 H125 V86 M120 68 V86" pathLength={1} />
-        <path d="M110 70 v3 M130 70 v3" pathLength={1} strokeWidth="1.6" />
-        {/* Porch: dentil cornice, deep fascia, four square panelled pillars */}
-        <path d="M46 19 H194 M48 22.5 H192 M50 32 H190 M50 22.5 V32 M190 22.5 V32" pathLength={1} />
-        <path d={dentils.map((x) => `M${x} 22.5 V25`).join(' ')} pathLength={1} opacity=".7" />
-        {pillars.map((x) => (
-          <path
-            key={x}
-            d={`M${x - 5} 32 H${x + 5} M${x - 3.6} 33.5 V79 M${x + 3.6} 33.5 V79 M${x - 1.6} 37 V75 M${x + 1.6} 37 V75 M${x - 5.2} 79 H${x + 5.2} V86 H${x - 5.2} Z`}
-            pathLength={1}
-          />
-        ))}
+        <path d="M115 45 h10 v12 h-10 Z M120 45 v12" pathLength={1} />
+        <path d={`M112 57.5 H128 M112 52.5 H128 ${[114, 117, 120, 123, 126].map((x) => `M${x} 52.5 V57.5`).join(' ')}`} pathLength={1} />
+        <path d="M112.5 64 H127.5 M114 64 V86 M126 64 V86 M116.5 66 h7 V86 h-7 Z" pathLength={1} />
+        <path d="M110 68 v3.2 M130 68 v3.2" pathLength={1} strokeWidth="1.6" />
         {/* The crystal lantern hanging from the porch ceiling */}
-        <path d="M120 32 V38 M117.5 38 h5 l1 2.5 h-7 Z M116.5 40.5 l1.2 5.5 h4.6 l1.2 -5.5 M120 40.5 V46 M118.2 46 l1.8 2.4 l1.8 -2.4" pathLength={1} />
-        {/* Fountain: basin, tiered bowl and statue, falling water */}
-        <path d="M95 98 C 95 92.5, 145 92.5, 145 98 C 145 103.5, 95 103.5, 95 98 Z" pathLength={1} />
-        <path d="M99 97 C 99 94.5, 141 94.5, 141 97" pathLength={1} opacity=".6" />
-        <path d="M116 96 C 116 91, 117.5 87, 118 82.5 H122 C 122.5 87, 124 91, 124 96 M118 88 C 119 86.5, 121 86.5, 122 88" pathLength={1} />
-        <path d="M105 76 Q 110 83 120 83 Q 130 83 135 76 Q 127.5 78.5 120 78 Q 112.5 78.5 105 76 Z" pathLength={1} />
-        <path d="M120 78 V71.5 M117 71.5 h6 M120 71.5 V68" pathLength={1} />
-        <path d="M105.5 77 C 102 82, 101 88, 101 95 M134.5 77 C 138 82, 139 88, 139 95" pathLength={1} opacity=".5" strokeDasharray="1.2 2.2" />
-        {/* Ground line and the round brick court opening towards us */}
-        <path d="M4 86 H94 M146 86 H236" pathLength={1} opacity=".7" />
-        <path d="M70 92 C 76 104, 164 104, 170 92 M86 103 L78 112 M154 103 L162 112" pathLength={1} opacity=".55" />
+        <path d="M120 34 V35.5 M118 35.5 h4 l.8 2 h-5.6 Z M117.2 37.5 l1 3.6 h3.6 l1 -3.6 M120 37.5 V41.1 M118.6 41.1 l1.4 1.6 l1.4 -1.6" pathLength={1} />
+        {/* Fountain before the door: basin, tiered bowl and statue */}
+        <path d="M104 92 C 104 88.5, 136 88.5, 136 92 C 136 95.5, 104 95.5, 104 92 Z" pathLength={1} />
+        <path d="M117.5 91 C 117.5 87, 118.5 84, 118.6 80.5 H121.4 C 121.5 84, 122.5 87, 122.5 91" pathLength={1} />
+        <path d="M111 76 Q 114 81 120 81 Q 126 81 129 76 Q 124.5 77.8 120 77.5 Q 115.5 77.8 111 76 Z M120 77.5 V72.5 M118 72.5 h4" pathLength={1} />
+        <path d="M111.5 77 C 109.5 81, 108.5 85, 108.5 89.5 M128.5 77 C 130.5 81, 131.5 85, 131.5 89.5" pathLength={1} opacity=".5" strokeDasharray="1.2 2.2" />
+        {/* The rise of lawn the house sits on */}
+        <path d="M0 89 H104 M136 89 H240" pathLength={1} opacity=".7" />
+        <path d="M14 95 C 60 91.5, 180 91.5, 226 95 M34 101 C 80 98, 160 98, 206 101" pathLength={1} opacity=".45" />
       </g>
     </svg>
   );
@@ -344,7 +328,7 @@ export default function WeddingTemplate({ portal }: { portal: GuestPortal }) {
               <Rosette className="-bottom-2 -right-2" />
             </div>
 
-            <div className="mx-auto mb-4 flex w-[86%] max-w-[230px] justify-center sm:mb-5">
+            <div className="mx-auto mb-4 flex w-[92%] max-w-[240px] justify-center sm:mb-5">
               <Estate />
             </div>
 

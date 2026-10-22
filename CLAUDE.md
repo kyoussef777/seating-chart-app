@@ -188,12 +188,12 @@ gesture works against that rather than against four different record shapes.
   own `fixed`, clipped layer.
 - The wedding template is styled after the Park Savoy Estate (Florham Park,
   NJ): white Carrara marble, gilt boiserie panel with rosettes, a line drawing
-  of the real front (from the venue's photo: two-storey clapboard house, black
-  shutters, the flat-roofed porch on four square panelled pillars with a dentil
-  cornice, Juliet balcony and lantern, tiered fountain in a round brick court,
-  boxwood and mums, no trees, lit as at night: windows, lantern and fairy lights — not a
-  pediment, which read as a courthouse), and a crystal
-  chandelier on wider screens.
+  of the real front, laid out after the estate's illustrated print (main house
+  under a hipped roof, columned portico with its own roof, plain piers,
+  single-storey wings with lattice-railed terraces, Juliet balcony, fountain)
+  in plain lines — no trees, hedges or stone texture — lit as at night by its
+  windows and lantern. Not a
+  pediment: that read as a courthouse. And a crystal chandelier on wider screens.
 - Site icons and the link preview are the couple's monogram on ivory, via Next's
   file convention in `src/app/` (`favicon.ico`, `icon.png`, `apple-icon.png`,
   `opengraph-image.jpg` + `.alt.txt`). The link preview is a designed card —
