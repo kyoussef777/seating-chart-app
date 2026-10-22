@@ -193,7 +193,10 @@ gesture works against that rather than against four different record shapes.
   steps read as a courthouse), and a crystal chandelier on wider screens.
 - Site icons and the link preview are the couple's monogram on ivory, via Next's
   file convention in `src/app/` (`favicon.ico`, `icon.png`, `apple-icon.png`,
-  `opengraph-image.png` + `.alt.txt`). File-based images override the
+  `opengraph-image.jpg` + `.alt.txt`). The link preview is a designed card —
+  monogram, estate drawing, names, venue and a "Find Your Table" bar — rendered
+  once in the browser with the site's own fonts, so the names on it are baked
+  in and it must be re-rendered if they change. File-based images override the
   `openGraph.images` in metadata. Keep them on an opaque background: dark ink
   on transparency vanishes in dark-mode tabs and message previews.
 - Every shared panel element carries a `portal-*` class with no styles of its
