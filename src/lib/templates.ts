@@ -105,9 +105,10 @@ export interface EventTemplate {
   displayTracking: string;
   /**
    * How the event name breaks across lines. `last-word` drops the final word
-   * to a line of its own; `couple` stacks two names around a set-apart
-   * ampersand ("Mira / & / Kamal") and falls back to balanced lines when the
-   * name is not a couple.
+   * to a line of its own; `couple` sets two names on one line around a small
+   * italic ampersand ("Mira & Kamal"), breaking at the ampersand only when one
+   * line would be too small, and falls back to balanced lines when the name is
+   * not a couple.
    */
   titleLayout: 'last-word' | 'couple';
   /**

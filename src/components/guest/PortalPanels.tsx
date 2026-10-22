@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { EventTemplate } from '@/lib/templates';
 import type { GuestPortal } from '@/hooks/useGuestPortal';
-import { fitFontSize, splitCouple } from '@/lib/display-text';
+import { fitFontSize, longestBalancedLine, splitCouple } from '@/lib/display-text';
 
 /**
  * The parts of the guest portal every template shares: the search box, the
@@ -135,39 +135,40 @@ function EventTitle({ template, name }: { template: EventTemplate; name: string 
       );
     }
 
-    // Stationery convention: each name on its own line, the joiner set small
-    // and italic between them. Read aloud it is still one name.
+    // One line — "MIRA & KAMAL" — with the joiner set small and italic. Only
+    // when that line would drop below a comfortable size does it break, and
+    // then at the joiner: "ALEXANDRINA MONTGOMERY / & BARTHOLOMEW CHRISTOPHERSON".
+    // In CSS: the one-line size if it is at least 24px, else the two-line size.
+    const joiner = couple.joiner.toLowerCase() === 'and' ? 'and' : '&';
+    const tail = `${joiner} ${couple.second}`;
+    const em = (chars: number) => Math.round(Math.max(1, chars) * template.displayCharEm * 100) / 100;
+    const oneLine = em(longestBalancedLine(`${couple.first} ${tail}`, 1));
+    const twoLines = em(Math.max(longestBalancedLine(couple.first, 2), longestBalancedLine(tail, 2)));
+    const fontSize = `clamp(${fit.minPx}px, max(calc(100cqi / ${oneLine}), min(calc(100cqi / ${twoLines}), 24px)), ${fit.maxPx}px)`;
+
     return (
-      <h1
-        className={className}
-        aria-label={name}
-        style={{
-          ...style,
-          lineHeight: 1.12,
-          fontSize: fitFontSize([couple.first, couple.second], { ...fit, maxLines: 2 }),
-        }}
-      >
-        <span aria-hidden className="portal-title-line block text-balance">
+      <h1 className={`${className} text-balance`} aria-label={name} style={{ ...style, lineHeight: 1.2, fontSize }}>
+        <span aria-hidden className="portal-title-line inline-block">
           {couple.first}
-        </span>
-        <span
-          aria-hidden
-          className="portal-title-joiner block"
-          style={{
-            fontFamily: fonts.body,
-            fontStyle: 'italic',
-            textTransform: 'none',
-            letterSpacing: 0,
-            color: palette.accentText,
-            fontSize: '0.72em',
-            lineHeight: 1.3,
-            margin: '.08em 0',
-          }}
-        >
-          {couple.joiner.toLowerCase() === 'and' ? 'and' : '&'}
-        </span>
-        <span aria-hidden className="portal-title-line block text-balance">
-          {couple.second}
+        </span>{' '}
+        <span aria-hidden className="inline-block">
+          <span
+            className="portal-title-joiner inline-block"
+            style={{
+              fontFamily: fonts.body,
+              fontStyle: 'italic',
+              textTransform: 'none',
+              letterSpacing: 0,
+              color: palette.accentText,
+              fontSize: '0.8em',
+              // Pull back over the first name's trailing tracking so the
+              // ampersand sits evenly between the two names.
+              margin: '0 .45em 0 -.15em',
+            }}
+          >
+            {joiner}
+          </span>
+          <span className="portal-title-line inline-block">{couple.second}</span>
         </span>
       </h1>
     );
@@ -211,7 +212,9 @@ export function PortalHeader({ template, portal }: PanelProps) {
     <div className="portal-header text-center [container-type:inline-size]">
       {kicker && (
         <div className="portal-kicker mb-4 flex items-center justify-center gap-3 sm:mb-5 sm:px-8">
-          {!longKicker && <Rule color={palette.accent} width={40} />}
+          {/* The side rules drop out on the narrowest phones, where they would
+              squeeze even a short kicker onto three lines. */}
+          {!longKicker && <Rule color={palette.accent} width={40} className="hidden min-[360px]:block" />}
           {/* Tracking trails the last letter too; pad the front to match so
               the words sit on the true centre. */}
           <span className={`block text-balance leading-[1.75] ${WRAP_ANYWHERE}`} style={{ paddingLeft: kickerTracking }}>
@@ -219,7 +222,7 @@ export function PortalHeader({ template, portal }: PanelProps) {
               {kicker}
             </Eyebrow>
           </span>
-          {!longKicker && <Rule color={palette.accent} width={40} />}
+          {!longKicker && <Rule color={palette.accent} width={40} className="hidden min-[360px]:block" />}
         </div>
       )}
 

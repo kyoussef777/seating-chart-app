@@ -215,7 +215,8 @@ gesture works against that rather than against four different record shapes.
   have `container-type: inline-size`. Never set display text `nowrap` — that is
   what pushed long wedding names off both edges of the card.
 - `splitCouple()` finds "A & B" / "A and B" for the `couple` title layout, which
-  sets the joiner on its own line. `displayCharEm` on each template is measured
+  keeps the names on one line ("MIRA & KAMAL", not stacked) with a small italic
+  joiner, breaking at the joiner only when one line would fall below 24px. `displayCharEm` on each template is measured
   from the loaded face; re-measure it if a template's display font changes.
 
 **Guest list sorting (`/src/lib/guest-sort.ts`):**
