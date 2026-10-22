@@ -25,6 +25,13 @@ export const DEFAULT_TEMPLATE_ID: TemplateId = 'bridal-shower';
 export interface TemplatePalette {
   /** `background` shorthand for the page itself. */
   pageBackground: string;
+  /**
+   * Solid colour painted on <html> and <body> while the portal is open, so
+   * rubber-band scrolling, the area behind the on-screen keyboard and anything
+   * past the end of the page match the template — without it they show the
+   * body's own colour, which is near-black in dark mode.
+   */
+  canvas: string;
   /** Hairline rules, dividers and frames. */
   accent: string;
   /** Small-caps eyebrow/label text. */
@@ -133,6 +140,7 @@ export const EVENT_TEMPLATES: Record<TemplateId, EventTemplate> = {
     palette: {
       pageBackground:
         'linear-gradient(180deg,#FFFFFF 0%,#FFFFFF 42%,#FBF6EE 66%,#F3EEE0 82%,#E9F0E0 100%)',
+      canvas: '#F6F3EA',
       accent: '#C9B896',
       accentText: '#8A7A5C',
       heading: '#4A5F45',
@@ -167,7 +175,7 @@ export const EVENT_TEMPLATES: Record<TemplateId, EventTemplate> = {
   wedding: {
     id: 'wedding',
     name: 'Wedding',
-    description: 'Ivory and gold — a quiet framed card, no photograph needed.',
+    description: 'Marble, gold and crystal — a classic French estate, no photograph needed.',
     displayCase: 'uppercase',
     displayTracking: '.12em',
     titleLayout: 'couple',
@@ -176,27 +184,30 @@ export const EVENT_TEMPLATES: Record<TemplateId, EventTemplate> = {
     shape: { input: '4px', button: '4px', panel: '2px' },
     palette: {
       pageBackground:
-        'linear-gradient(180deg,#FBF8F2 0%,#F7F2E8 46%,#F2EADC 78%,#EBE1CF 100%)',
+        'linear-gradient(180deg,#FDFCF9 0%,#F8F6F1 40%,#F1EDE5 76%,#E9E3D8 100%)',
+      canvas: '#F4F1EA',
       accent: '#C2A55C',
       accentText: '#9A8148',
       heading: '#2F3038',
       body: '#3A3B44',
       muted: '#7C7A74',
-      surface: 'linear-gradient(180deg,rgba(255,254,251,.96),rgba(253,250,243,.92))',
+      surface: 'linear-gradient(180deg,rgba(255,255,254,.97),rgba(252,250,246,.94))',
       surfaceBorder: 'rgba(194,165,92,.5)',
-      surfaceShadow: '0 24px 60px -34px rgba(60,52,30,.55)',
+      surfaceShadow: '0 30px 70px -36px rgba(40,38,32,.5)',
       inputBackground: '#FFFDF8',
       inputBorder: '#E0D5BC',
       inputText: '#2F3038',
       inputFocusBorder: '#C2A55C',
-      buttonBackground: 'linear-gradient(180deg,#3C3D46,#26272E)',
+      // Black-shutter lacquer against the white facade.
+      buttonBackground: 'linear-gradient(180deg,#2E2F33,#18191C)',
       buttonText: '#F8F4EA',
-      buttonShadow: '0 12px 26px -14px rgba(38,39,46,.85)',
+      buttonShadow: '0 12px 26px -14px rgba(24,25,28,.85)',
       resultBackground:
         'linear-gradient(140deg,rgba(247,242,232,.95),rgba(255,255,255,.96) 52%,rgba(233,222,199,.75))',
-      dividerLeaf: '#CBBE94',
+      // Clipped boxwood from the formal gardens.
+      dividerLeaf: '#A9B49A',
       dividerBloom: '#C2A55C',
-      swatches: ['#2F3038', '#C2A55C', '#F7F2E8'],
+      swatches: ['#18191C', '#C2A55C', '#F4F1EA'],
     },
     copy: {
       eventName: 'Our Wedding Day',
@@ -220,6 +231,7 @@ export const EVENT_TEMPLATES: Record<TemplateId, EventTemplate> = {
     shape: { input: '8px', button: '8px', panel: '12px' },
     palette: {
       pageBackground: '#F5F5F4',
+      canvas: '#F5F5F4',
       accent: '#C6B79B',
       accentText: '#8B7043',
       heading: '#1F3D2B',

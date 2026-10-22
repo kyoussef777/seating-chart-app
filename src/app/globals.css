@@ -141,11 +141,44 @@ body {
 .wedding-portal .wed-frame-outer { animation: wedFrame 1.4s var(--wed-ease) both }
 .wedding-portal .wed-frame-inner { animation: wedFrame 1.4s var(--wed-ease) 0.1s both }
 .wedding-portal .wed-card { animation: wedFade 0.8s ease both }
-.wedding-portal .wed-laurel path,
-.wedding-portal .wed-laurel ellipse {
+.wedding-portal .wed-crest :is(path, circle) {
   stroke-dasharray: 1;
-  animation: wedDraw 1.6s var(--wed-ease) both;
-  animation-delay: calc(0.5s + var(--i, 0) * 0.14s);
+  animation: wedDraw 1.8s var(--wed-ease) 0.2s both;
+}
+.wedding-portal .wed-panel { animation: wedFade 1.4s ease 0.3s both }
+.wedding-portal .wed-rosette { animation: wedBloom 0.9s var(--wed-ease) 0.6s both }
+
+/* The chandelier: it eases down into place, then sways a hair on its chain
+   while the crystals catch the light one at a time. */
+@keyframes wedLower {
+  from { opacity: 0; transform: translateY(-24px) }
+  to   { opacity: 1; transform: none }
+}
+@keyframes wedSway {
+  from { rotate: -0.5deg }
+  to   { rotate: 0.5deg }
+}
+@keyframes wedGlint {
+  0%, 100% { opacity: 0.55 }
+  50%      { opacity: 1; filter: drop-shadow(0 0 2.5px rgba(255, 236, 180, 0.95)) }
+}
+@keyframes wedFlicker {
+  0%, 100% { opacity: 0.85; transform: scaleY(1) }
+  50%      { opacity: 1; transform: scaleY(1.12) }
+}
+.wedding-portal .wed-chandelier {
+  transform-origin: 50% 0;
+  animation: wedLower 1.6s var(--wed-ease) both, wedSway 7s ease-in-out 1.6s infinite alternate;
+}
+.wedding-portal .wed-crystal {
+  animation: wedGlint 4.8s ease-in-out infinite;
+  animation-delay: calc(var(--i, 0) * 0.9s);
+}
+.wedding-portal .wed-flame {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation: wedFlicker 2.6s ease-in-out infinite;
+  animation-delay: calc(var(--i, 0) * -0.45s);
 }
 
 /* Entrance, top to bottom */
