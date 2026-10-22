@@ -2,6 +2,7 @@
 
 import { resolveTemplate } from '@/lib/templates';
 import type { PortalSettings } from '@/lib/event-settings';
+import { splitCouple } from '@/lib/display-text';
 
 /**
  * A miniature of the guest portal, drawn with the selected template's real
@@ -12,9 +13,12 @@ export default function PortalPreview({ settings }: { settings: PortalSettings }
   const template = resolveTemplate(settings.template);
   const { palette, fonts, shape } = template;
 
-  const words = settings.eventName.trim().split(/\s+/);
-  const tail = words.length > 1 ? words[words.length - 1] : '';
-  const head = tail ? words.slice(0, -1).join(' ') : settings.eventName || 'Your event name';
+  // Same line breaks as the portal's title, so the admin sees the real shape.
+  const name = settings.eventName.trim() || 'Your event name';
+  const couple = template.titleLayout === 'couple' ? splitCouple(name) : null;
+  const words = name.split(/\s+/);
+  const tail = template.titleLayout === 'last-word' && words.length > 1 ? words[words.length - 1] : '';
+  const head = tail ? words.slice(0, -1).join(' ') : name;
 
   return (
     <div
@@ -33,19 +37,19 @@ export default function PortalPreview({ settings }: { settings: PortalSettings }
         >
           {settings.eventKicker && (
             <div className="mb-3 flex items-center justify-center gap-2">
-              <span style={{ width: 24, height: 1, background: palette.accent }} />
+              <span style={{ width: 24, height: 1, flexShrink: 0, background: palette.accent }} />
               <span
-                className="text-[10px] uppercase"
+                className="min-w-0 text-balance text-[10px] uppercase [overflow-wrap:anywhere]"
                 style={{ fontFamily: fonts.label, letterSpacing: '.4em', color: palette.accentText }}
               >
                 {settings.eventKicker}
               </span>
-              <span style={{ width: 24, height: 1, background: palette.accent }} />
+              <span style={{ width: 24, height: 1, flexShrink: 0, background: palette.accent }} />
             </div>
           )}
 
           <p
-            className="m-0 mb-2 leading-tight"
+            className="m-0 mb-2 text-balance leading-tight [overflow-wrap:anywhere]"
             style={{
               fontFamily: fonts.display,
               color: palette.heading,
@@ -54,13 +58,35 @@ export default function PortalPreview({ settings }: { settings: PortalSettings }
               textTransform: template.displayCase === 'uppercase' ? 'uppercase' : 'none',
             }}
           >
-            {head}
-            {tail && <span className="block">{tail}</span>}
+            {couple ? (
+              <>
+                {couple.first}
+                <span
+                  className="block"
+                  style={{
+                    fontFamily: fonts.body,
+                    fontStyle: 'italic',
+                    textTransform: 'none',
+                    letterSpacing: 0,
+                    color: palette.accentText,
+                    fontSize: '0.72em',
+                  }}
+                >
+                  {couple.joiner.toLowerCase() === 'and' ? 'and' : '&'}
+                </span>
+                <span className="block">{couple.second}</span>
+              </>
+            ) : (
+              <>
+                {head}
+                {tail && <span className="block">{tail}</span>}
+              </>
+            )}
           </p>
 
           {(settings.venueName || settings.eventDate) && (
             <p
-              className="m-0 mb-2 text-[10px] uppercase"
+              className="m-0 mb-2 text-balance text-[10px] uppercase [overflow-wrap:anywhere]"
               style={{ fontFamily: fonts.label, letterSpacing: '.16em', color: palette.accentText }}
             >
               {[settings.venueName, settings.eventDate].filter(Boolean).join(' · ')}
@@ -68,7 +94,7 @@ export default function PortalPreview({ settings }: { settings: PortalSettings }
           )}
 
           <p
-            className="m-0 mb-4 text-[13px] italic"
+            className="m-0 mb-4 text-pretty text-[13px] italic [overflow-wrap:anywhere]"
             style={{ fontFamily: fonts.body, color: palette.heading }}
           >
             {settings.homePageText || 'Your welcome message will appear here'}

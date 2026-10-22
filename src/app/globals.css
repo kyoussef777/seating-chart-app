@@ -87,6 +87,138 @@ body {
   .garden-enter { animation: none }
 }
 
+/* ---- Wedding home page ----
+   Everything is scoped to .wedding-portal and keyed off the shared portal-*
+   classes in PortalPanels, so the other templates are untouched. The entrance
+   reads top to bottom and ends on the search box; a found table is revealed
+   the same way. Only opacity, transform and a little blur move, so nothing
+   reflows while it plays. */
+.wedding-portal {
+  --wed-ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+@keyframes wedRise {
+  from { opacity: 0; transform: translateY(14px); filter: blur(4px) }
+  to   { opacity: 1; transform: none; filter: blur(0) }
+}
+@keyframes wedFade { from { opacity: 0 } to { opacity: 1 } }
+@keyframes wedFrame {
+  from { opacity: 0; transform: scale(1.025) }
+  to   { opacity: 1; transform: none }
+}
+@keyframes wedGrow {
+  from { opacity: 0; transform: scaleX(0) }
+  to   { opacity: 1; transform: none }
+}
+@keyframes wedBloom {
+  from { opacity: 0; transform: scale(0.4) rotate(-25deg) }
+  to   { opacity: 1; transform: none }
+}
+@keyframes wedJoiner {
+  from { opacity: 0; transform: scale(0.8) }
+  to   { opacity: 1; transform: none }
+}
+@keyframes wedDraw { from { stroke-dashoffset: 1 } to { stroke-dashoffset: 0 } }
+@keyframes wedOption {
+  from { opacity: 0; transform: translateY(-4px) }
+  to   { opacity: 1; transform: none }
+}
+@keyframes wedBeckon {
+  0%        { box-shadow: 0 0 0 0 rgba(194, 165, 92, 0.34) }
+  70%, 100% { box-shadow: 0 0 0 11px rgba(194, 165, 92, 0) }
+}
+@keyframes wedDrift {
+  from { transform: translate3d(-1.5%, -1%, 0) }
+  to   { transform: translate3d(1.5%, 1.5%, 0) }
+}
+@keyframes wedSheen {
+  from { transform: translateX(-130%) skewX(-18deg) }
+  to   { transform: translateX(330%) skewX(-18deg) }
+}
+
+/* Scenery and frame */
+.wedding-portal .wed-glow { animation: wedDrift 24s ease-in-out infinite alternate }
+.wedding-portal .wed-frame-outer { animation: wedFrame 1.4s var(--wed-ease) both }
+.wedding-portal .wed-frame-inner { animation: wedFrame 1.4s var(--wed-ease) 0.1s both }
+.wedding-portal .wed-card { animation: wedFade 0.8s ease both }
+.wedding-portal .wed-laurel path,
+.wedding-portal .wed-laurel ellipse {
+  stroke-dasharray: 1;
+  animation: wedDraw 1.6s var(--wed-ease) both;
+  animation-delay: calc(0.5s + var(--i, 0) * 0.14s);
+}
+
+/* Entrance, top to bottom */
+.wedding-portal .portal-kicker { animation: wedRise 0.9s var(--wed-ease) 0.15s both }
+.wedding-portal .portal-title-line { animation: wedRise 1.1s var(--wed-ease) 0.3s both }
+.wedding-portal .portal-title-joiner { animation: wedJoiner 1s var(--wed-ease) 0.5s both }
+.wedding-portal .portal-title-line:last-child:not(:first-child) { animation-delay: 0.6s }
+.wedding-portal .portal-rule-l { transform-origin: right; animation: wedGrow 1.1s var(--wed-ease) 0.75s both }
+.wedding-portal .portal-rule-r { transform-origin: left; animation: wedGrow 1.1s var(--wed-ease) 0.75s both }
+.wedding-portal .portal-bloom { animation: wedBloom 0.9s var(--wed-ease) 0.7s both }
+.wedding-portal .portal-venue { animation: wedRise 0.9s var(--wed-ease) 0.85s both }
+.wedding-portal .portal-welcome { animation: wedRise 0.9s var(--wed-ease) 0.95s both }
+.wedding-portal .portal-search { animation: wedRise 0.9s var(--wed-ease) 1.05s both }
+
+/* Once everything has arrived, a slow halo points at the name field. */
+.wedding-portal .portal-beckon { animation: wedBeckon 2.4s ease-out 2.2s 3 }
+
+/* Suggestions fall into place one after another. */
+.wedding-portal .portal-option {
+  animation: wedOption 0.45s var(--wed-ease) both;
+  animation-delay: calc(var(--i, 0) * 40ms);
+}
+.wedding-portal .portal-error { animation: wedRise 0.6s var(--wed-ease) both }
+
+/* Buttons: a lift and a single pass of light on hover. */
+.wedding-portal .portal-button {
+  transition: transform 0.35s var(--wed-ease), filter 0.35s var(--wed-ease), opacity 0.2s;
+}
+.wedding-portal .portal-button::after {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 35%;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent, rgba(255, 246, 222, 0.2), transparent);
+  transform: translateX(-130%) skewX(-18deg);
+}
+@media (hover: hover) {
+  .wedding-portal .portal-button:hover:not(:disabled) {
+    transform: translateY(-1px);
+    filter: brightness(1.12);
+  }
+  .wedding-portal .portal-button:hover:not(:disabled)::after {
+    animation: wedSheen 1.1s var(--wed-ease);
+  }
+}
+.wedding-portal .portal-button:active:not(:disabled) { transform: scale(0.99) }
+
+/* The answer: divider draws out, then welcome, table and seats rise in turn. */
+.wedding-portal .portal-result-divider .portal-rule-l,
+.wedding-portal .portal-result-divider .portal-rule-r { animation-delay: 0.1s }
+.wedding-portal .portal-result-divider .portal-bloom { animation-delay: 0.05s }
+.wedding-portal .portal-result-welcome { animation: wedRise 0.8s var(--wed-ease) 0.2s both }
+.wedding-portal .portal-result-lead { animation: wedRise 0.8s var(--wed-ease) 0.35s both }
+.wedding-portal .portal-table { animation: wedRise 1.2s var(--wed-ease) 0.5s both }
+.wedding-portal .portal-result-seats { animation: wedRise 0.8s var(--wed-ease) 0.8s both }
+.wedding-portal .portal-result-pending { animation: wedRise 0.8s var(--wed-ease) 0.4s both }
+.wedding-portal .portal-again { animation: wedFade 0.8s ease 1.1s both }
+.wedding-portal .portal-address { animation: wedRise 0.9s var(--wed-ease) 1.2s both }
+.wedding-portal .portal-saved { animation: wedRise 0.7s var(--wed-ease) both }
+.wedding-portal .portal-saved-tick {
+  stroke-dasharray: 1;
+  animation: wedDraw 0.7s var(--wed-ease) 0.3s both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wedding-portal *,
+  .wedding-portal *::after {
+    animation: none !important;
+    transition-duration: 0s !important;
+  }
+}
+
 /* ---- Mobile admin helpers ---- */
 
 /* iOS zooms the page when a focused control renders below 16px. The admin

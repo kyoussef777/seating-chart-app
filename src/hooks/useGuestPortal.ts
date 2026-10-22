@@ -54,6 +54,9 @@ export function useGuestPortal(initialSettings?: PortalSettings | null) {
   const [address, setAddress] = useState('');
   const [isUpdatingAddress, setIsUpdatingAddress] = useState(false);
   const [addressError, setAddressError] = useState<string | null>(null);
+  // Set once an address is saved, so the guest sees it went through rather
+  // than the form simply vanishing.
+  const [addressSaved, setAddressSaved] = useState(false);
 
   const blurTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Server-rendered settings are read once; later renders must not re-trigger
@@ -129,6 +132,7 @@ export function useGuestPortal(initialSettings?: PortalSettings | null) {
       setAddress(guest.address || '');
       setGuestTable(guest.tableId ? tables.find((t) => t.id === guest.tableId) ?? null : null);
       setAddressError(null);
+      setAddressSaved(false);
       // Only ask for an address when the admin has address collection on.
       setShowAddressForm(!guest.address && settings.addressCollectionEnabled);
     },
@@ -225,6 +229,7 @@ export function useGuestPortal(initialSettings?: PortalSettings | null) {
         if (response.ok) {
           setFoundGuest({ ...foundGuest, address: address.trim() });
           setShowAddressForm(false);
+          setAddressSaved(true);
         } else {
           const data = await response.json().catch(() => ({}));
           setAddressError(data.error || 'We could not save that address. Please try again.');
@@ -239,6 +244,21 @@ export function useGuestPortal(initialSettings?: PortalSettings | null) {
   );
 
   const skipAddress = useCallback(() => setShowAddressForm(false), []);
+
+  /** Back to an empty search, for the next guest at a shared phone. */
+  const clearResult = useCallback(() => {
+    setSearchName('');
+    setSuggestions([]);
+    setShowSuggestions(false);
+    setHighlightedIndex(-1);
+    setJustSelected(false);
+    setSearchError(null);
+    setFoundGuest(null);
+    setGuestTable(null);
+    setShowAddressForm(false);
+    setAddressError(null);
+    setAddressSaved(false);
+  }, []);
 
   const partySize = foundGuest?.partySize || 1;
 
@@ -262,6 +282,7 @@ export function useGuestPortal(initialSettings?: PortalSettings | null) {
       address,
       isUpdatingAddress,
       addressError,
+      addressSaved,
       onSearchChange,
       onKeyDown,
       onFocus,
@@ -271,6 +292,7 @@ export function useGuestPortal(initialSettings?: PortalSettings | null) {
       setAddress,
       onAddressSubmit,
       skipAddress,
+      clearResult,
     }),
     [
       settings,
@@ -289,6 +311,7 @@ export function useGuestPortal(initialSettings?: PortalSettings | null) {
       address,
       isUpdatingAddress,
       addressError,
+      addressSaved,
       onSearchChange,
       onKeyDown,
       onFocus,
@@ -297,6 +320,7 @@ export function useGuestPortal(initialSettings?: PortalSettings | null) {
       selectGuest,
       onAddressSubmit,
       skipAddress,
+      clearResult,
     ]
   );
 }
