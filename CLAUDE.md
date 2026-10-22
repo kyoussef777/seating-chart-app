@@ -180,6 +180,15 @@ gesture works against that rather than against four different record shapes.
 - `src/components/guest/templates/*` — scenery and frame only. A template may
   pass `variant="inset"` to the result and address panels to draw them inside
   its own card (the wedding does) instead of as separate boxes below it.
+- `GuestPortal` paints `<html>`/`<body>` with the template's `palette.canvas`
+  via a rendered `<style>`. The body is near-black in dark mode, and it showed
+  through behind the keyboard and below the page when a guest typed a name.
+  For the same reason a template's root must not be `overflow-hidden` (it
+  clipped the suggestion list) — use `overflow-x-clip`, and put scenery in its
+  own `fixed`, clipped layer.
+- The wedding template is styled after the Park Savoy Estate (Florham Park,
+  NJ): white Carrara marble, gilt boiserie panel with rosettes, a line-drawn
+  portico crest, and a crystal chandelier above the card on wider screens.
 - Every shared panel element carries a `portal-*` class with no styles of its
   own; a template's motion targets them from globals.css under its root class
   (`.wedding-portal .portal-title-line`), so choreography never leaks between
