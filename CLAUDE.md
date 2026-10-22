@@ -191,7 +191,8 @@ gesture works against that rather than against four different record shapes.
   of the real front (from the venue's photo: two-storey clapboard house, black
   shutters, the flat-roofed porch on four square panelled pillars with a dentil
   cornice, Juliet balcony and lantern, tiered fountain in a round brick court,
-  boxwood and mums — not a pediment, which read as a courthouse), and a crystal
+  boxwood and mums, lit as at night: windows, lantern and fairy lights — not a
+  pediment, which read as a courthouse), and a crystal
   chandelier on wider screens.
 - Site icons and the link preview are the couple's monogram on ivory, via Next's
   file convention in `src/app/` (`favicon.ico`, `icon.png`, `apple-icon.png`,
