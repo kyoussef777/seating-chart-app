@@ -60,21 +60,20 @@ export default function PortalPreview({ settings }: { settings: PortalSettings }
           >
             {couple ? (
               <>
-                {couple.first}
+                {couple.first}{' '}
                 <span
-                  className="block"
                   style={{
                     fontFamily: fonts.body,
                     fontStyle: 'italic',
                     textTransform: 'none',
                     letterSpacing: 0,
                     color: palette.accentText,
-                    fontSize: '0.72em',
+                    fontSize: '0.8em',
                   }}
                 >
                   {couple.joiner.toLowerCase() === 'and' ? 'and' : '&'}
-                </span>
-                <span className="block">{couple.second}</span>
+                </span>{' '}
+                {couple.second}
               </>
             ) : (
               <>

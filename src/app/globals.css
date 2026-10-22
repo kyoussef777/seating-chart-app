@@ -141,9 +141,23 @@ body {
 .wedding-portal .wed-frame-outer { animation: wedFrame 1.4s var(--wed-ease) both }
 .wedding-portal .wed-frame-inner { animation: wedFrame 1.4s var(--wed-ease) 0.1s both }
 .wedding-portal .wed-card { animation: wedFade 0.8s ease both }
-.wedding-portal .wed-crest :is(path, circle) {
+.wedding-portal .wed-crest path {
   stroke-dasharray: 1;
   animation: wedDraw 1.8s var(--wed-ease) 0.2s both;
+}
+/* Shutters and hedges are filled, not drawn: they settle in once the lines
+   are down. */
+.wedding-portal .wed-crest-fill { animation: wedFade 1s ease 1.3s both }
+/* Evening at the estate: windows light one by one after the drawing and the
+   porch lantern breathes. */
+@keyframes wedLight { from { fill-opacity: 0 } to { fill-opacity: 0.42 } }
+@keyframes wedLanternGlow { 0%, 100% { opacity: 0.7 } 50% { opacity: 1 } }
+.wedding-portal .wed-window {
+  animation: wedLight 1.4s ease both;
+  animation-delay: calc(1.7s + var(--i, 0) * 0.11s);
+}
+.wedding-portal .wed-lantern {
+  animation: wedFade 1.2s ease 1.6s both, wedLanternGlow 3.6s ease-in-out 2.8s infinite;
 }
 .wedding-portal .wed-panel { animation: wedFade 1.4s ease 0.3s both }
 .wedding-portal .wed-rosette { animation: wedBloom 0.9s var(--wed-ease) 0.6s both }

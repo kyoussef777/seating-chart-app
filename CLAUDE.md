@@ -187,8 +187,21 @@ gesture works against that rather than against four different record shapes.
   clipped the suggestion list) — use `overflow-x-clip`, and put scenery in its
   own `fixed`, clipped layer.
 - The wedding template is styled after the Park Savoy Estate (Florham Park,
-  NJ): white Carrara marble, gilt boiserie panel with rosettes, a line-drawn
-  portico crest, and a crystal chandelier above the card on wider screens.
+  NJ): white Carrara marble, gilt boiserie panel with rosettes, a line drawing
+  of the real front, laid out after the estate's illustrated print (main house
+  under a hipped roof, columned portico with its own roof, plain piers,
+  single-storey wings with lattice-railed terraces, Juliet balcony, fountain)
+  in plain lines — no trees, hedges or stone texture — lit as at night by its
+  windows and lantern. Not a
+  pediment: that read as a courthouse. And a crystal chandelier on wider screens.
+- Site icons and the link preview are the couple's monogram on ivory, via Next's
+  file convention in `src/app/` (`favicon.ico`, `icon.png`, `apple-icon.png`,
+  `opengraph-image.jpg` + `.alt.txt`). The link preview is a designed card —
+  monogram, estate drawing, names, venue and a "Find Your Table" bar — rendered
+  once in the browser with the site's own fonts, so the names on it are baked
+  in and it must be re-rendered if they change. File-based images override the
+  `openGraph.images` in metadata. Keep them on an opaque background: dark ink
+  on transparency vanishes in dark-mode tabs and message previews.
 - Every shared panel element carries a `portal-*` class with no styles of its
   own; a template's motion targets them from globals.css under its root class
   (`.wedding-portal .portal-title-line`), so choreography never leaks between
@@ -202,7 +215,8 @@ gesture works against that rather than against four different record shapes.
   have `container-type: inline-size`. Never set display text `nowrap` — that is
   what pushed long wedding names off both edges of the card.
 - `splitCouple()` finds "A & B" / "A and B" for the `couple` title layout, which
-  sets the joiner on its own line. `displayCharEm` on each template is measured
+  keeps the names on one line ("MIRA & KAMAL", not stacked) with a small italic
+  joiner, breaking at the joiner only when one line would fall below 24px. `displayCharEm` on each template is measured
   from the loaded face; re-measure it if a template's display font changes.
 
 **Guest list sorting (`/src/lib/guest-sort.ts`):**
