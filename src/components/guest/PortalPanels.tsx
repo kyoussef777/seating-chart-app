@@ -598,8 +598,11 @@ export function PortalResultPanel({
               style={{
                 fontFamily: fonts.body,
                 color: palette.heading,
+                // Semibold, so the answer is the first thing a guest's eye lands on.
+                fontWeight: 600,
                 letterSpacing: '.04em',
-                fontSize: fitFontSize(guestTable.name, { maxLines: 2, charEm: 0.52, maxPx: 46, minPx: 26 }),
+                // Wider than the regular face, so the fit allows a little more per character.
+                fontSize: fitFontSize(guestTable.name, { maxLines: 2, charEm: 0.55, maxPx: 52, minPx: 28 }),
               }}
             >
               {guestTable.name}
