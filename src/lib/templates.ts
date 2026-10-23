@@ -58,10 +58,10 @@ export interface TemplatePalette {
   buttonShadow: string;
   /** Fill behind the "here is your table" panel. */
   resultBackground: string;
-  /** Leaves of the small divider bloom under the event name. */
-  dividerLeaf: string;
-  /** Centre of the divider bloom. */
-  dividerBloom: string;
+  /** The small Coptic cross in the divider under the event name. */
+  dividerCross: string;
+  /** Boss at the centre of the divider cross. */
+  dividerCentre: string;
   /** Three representative colours, used for the admin template picker. */
   swatches: [string, string, string];
 }
@@ -159,8 +159,8 @@ export const EVENT_TEMPLATES: Record<TemplateId, EventTemplate> = {
       buttonShadow: '0 10px 22px -12px rgba(120,96,52,.9)',
       resultBackground:
         'linear-gradient(140deg,rgba(243,217,220,.6),rgba(255,255,255,.92) 46%,rgba(168,184,154,.38))',
-      dividerLeaf: '#A8B89A',
-      dividerBloom: '#E8B4B8',
+      dividerCross: '#A8B89A',
+      dividerCentre: '#E8B4B8',
       swatches: ['#4A5F45', '#C9B896', '#F3D9DC'],
     },
     copy: {
@@ -205,9 +205,9 @@ export const EVENT_TEMPLATES: Record<TemplateId, EventTemplate> = {
       buttonShadow: '0 12px 26px -14px rgba(24,25,28,.85)',
       resultBackground:
         'linear-gradient(140deg,rgba(247,242,232,.95),rgba(255,255,255,.96) 52%,rgba(233,222,199,.75))',
-      // Clipped boxwood from the formal gardens.
-      dividerLeaf: '#A9B49A',
-      dividerBloom: '#C2A55C',
+      // Forest green, to match the printed seating sign and welcome sign.
+      dividerCross: '#24412F',
+      dividerCentre: '#C2A55C',
       swatches: ['#18191C', '#C2A55C', '#F4F1EA'],
     },
     copy: {
@@ -250,8 +250,8 @@ export const EVENT_TEMPLATES: Record<TemplateId, EventTemplate> = {
       buttonShadow: '0 10px 22px -14px rgba(120,96,52,.9)',
       resultBackground:
         'linear-gradient(140deg,rgba(236,240,232,.9),rgba(255,255,255,.95) 55%,rgba(245,240,228,.9))',
-      dividerLeaf: '#A8B89A',
-      dividerBloom: '#C6A87A',
+      dividerCross: '#A8B89A',
+      dividerCentre: '#C6A87A',
       swatches: ['#1F3D2B', '#A38550', '#E7E5E4'],
     },
     copy: {

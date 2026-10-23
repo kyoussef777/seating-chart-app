@@ -91,16 +91,29 @@ export function Eyebrow({
   );
 }
 
-/** Two leaves and a bloom between fading rules. */
+/**
+ * A Coptic cross between fading rules: each arm flares into the three knobs of
+ * the Trinity, with a small boss at the crossing.
+ */
 function Ornament({ template, className = '' }: { template: EventTemplate; className?: string }) {
   const { palette } = template;
   return (
     <div aria-hidden className={`flex items-center justify-center gap-2.5 ${className}`}>
       <Rule color={palette.accent} width={56} dir="l" className="portal-rule-l" />
-      <svg className="portal-bloom" width="26" height="14" viewBox="0 0 26 14">
-        <ellipse cx="7" cy="7" rx="6.5" ry="3.4" transform="rotate(-24 7 7)" fill={palette.dividerLeaf} />
-        <ellipse cx="19" cy="7" rx="6.5" ry="3.4" transform="rotate(24 19 7)" fill={palette.dividerLeaf} />
-        <circle cx="13" cy="7" r="3" fill={palette.dividerBloom} />
+      <svg className="portal-bloom" width="16" height="16" viewBox="-17 -17 34 34">
+        <g fill={palette.dividerCross}>
+          {[0, 90, 180, 270].map((angle) => (
+            <g key={angle} transform={`rotate(${angle})`}>
+              <path d="M-2.2 0 L-3.6 -11 Q0 -12.4 3.6 -11 L2.2 0 Z" />
+              <circle cy="-14.3" r="2.7" />
+              <circle cy="-11.9" r="2.6" />
+              <circle cx="-3.7" cy="-11.6" r="2.4" />
+              <circle cx="3.7" cy="-11.6" r="2.4" />
+            </g>
+          ))}
+          <circle r="4.6" />
+        </g>
+        <circle r="2" fill={palette.dividerCentre} />
       </svg>
       <Rule color={palette.accent} width={56} dir="r" className="portal-rule-r" />
     </div>
@@ -585,8 +598,11 @@ export function PortalResultPanel({
               style={{
                 fontFamily: fonts.body,
                 color: palette.heading,
+                // Semibold, so the answer is the first thing a guest's eye lands on.
+                fontWeight: 600,
                 letterSpacing: '.04em',
-                fontSize: fitFontSize(guestTable.name, { maxLines: 2, charEm: 0.52, maxPx: 46, minPx: 26 }),
+                // Wider than the regular face, so the fit allows a little more per character.
+                fontSize: fitFontSize(guestTable.name, { maxLines: 2, charEm: 0.55, maxPx: 52, minPx: 28 }),
               }}
             >
               {guestTable.name}
