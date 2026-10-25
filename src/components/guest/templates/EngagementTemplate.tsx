@@ -38,7 +38,7 @@ export default function EngagementTemplate({ portal }: { portal: GuestPortal }) 
 
       <div className="relative z-10 mx-auto w-full max-w-[560px] px-4 pt-[4vh] pb-12 sm:pt-[6vh]">
         <div
-          className="garden-enter relative px-6 pt-9 pb-8 sm:px-10 sm:pt-11 sm:pb-9"
+          className="garden-enter relative z-10 px-6 pt-9 pb-8 sm:px-10 sm:pt-11 sm:pb-9"
           style={{
             background: palette.surface,
             border: `1px solid ${palette.surfaceBorder}`,
