@@ -211,7 +211,7 @@ export default function BridalShowerTemplate({ portal }: { portal: GuestPortal }
         />
 
         <div
-          className="garden-enter relative px-6 pt-9 pb-7 sm:px-[46px] sm:pt-11 sm:pb-[38px]"
+          className="garden-enter relative z-10 px-6 pt-9 pb-7 sm:px-[46px] sm:pt-11 sm:pb-[38px]"
           style={{
             background: template.palette.surface,
             borderRadius: '270px 270px 22px 22px',

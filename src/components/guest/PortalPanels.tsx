@@ -324,8 +324,12 @@ export function PortalSearchPanel({ template, portal }: PanelProps) {
   // good once the guest has started.
   const beckon = !focused && !portal.searchName && !portal.foundGuest;
 
+  // Raised above the result panel that follows it. The wedding's entrance
+  // animation leaves a transform on this form, which makes it its own stacking
+  // layer: without a z-index the suggestion list's z-20 only counts inside it,
+  // and the result drawn later covers the list.
   return (
-    <form onSubmit={portal.onSubmit} className="portal-search">
+    <form onSubmit={portal.onSubmit} className="portal-search relative z-10">
       <label htmlFor="search" className="mb-2 block">
         <Eyebrow template={template}>Enter your name</Eyebrow>
       </label>
