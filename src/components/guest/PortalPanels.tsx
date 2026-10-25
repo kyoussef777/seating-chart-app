@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { EventTemplate } from '@/lib/templates';
 import type { GuestPortal } from '@/hooks/useGuestPortal';
 import { fitFontSize, longestBalancedLine, splitCouple } from '@/lib/display-text';
+import { VenueMap } from './VenueMap';
 
 /**
  * The parts of the guest portal every template shares: the search box, the
@@ -623,6 +624,12 @@ export function PortalResultPanel({
                 : 'One seat reserved in your name'}
             </p>
           )}
+          <VenueMap
+            template={template}
+            tables={portal.tables}
+            layout={portal.layout}
+            highlightId={guestTable.id}
+          />
         </>
       ) : (
         <p

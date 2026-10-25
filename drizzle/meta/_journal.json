@@ -22,6 +22,13 @@
       "when": 1789431568267,
       "tag": "0002_overjoyed_adam_warlock",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1792963548477,
+      "tag": "0003_wedding_guest_list",
+      "breakpoints": true
     }
   ]
 }

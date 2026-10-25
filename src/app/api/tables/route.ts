@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireAuth } from '@/lib/auth';
+import { requireAuth, getSession } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { tables, guests } from '@/lib/schema';
 import { eq } from 'drizzle-orm';
@@ -43,9 +43,16 @@ export async function GET() {
     const allTables = await db.select().from(tables);
     const allGuests = await db.select().from(guests);
 
+    // The guest portal reads this route too; like /api/guests, only an admin
+    // gets phone numbers and addresses.
+    const isAuthenticated = (await getSession()) !== null;
+    const visibleGuests = isAuthenticated
+      ? allGuests
+      : allGuests.map(({ id, name, tableId, partySize }) => ({ id, name, tableId, partySize }));
+
     const tablesWithGuests = allTables.map(table => ({
       ...table,
-      guests: allGuests.filter(guest => guest.tableId === table.id)
+      guests: visibleGuests.filter(guest => guest.tableId === table.id)
     }));
 
     return NextResponse.json({ tables: tablesWithGuests });

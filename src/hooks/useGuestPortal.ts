@@ -4,6 +4,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useDebounce } from '@/hooks/useDebounce';
 import { searchGuests, MAX_SUGGESTIONS } from '@/lib/guest-search';
 import { defaultPortalSettings, toPortalSettings, type PortalSettings } from '@/lib/event-settings';
+import {
+  hydrateReferenceObject,
+  hydrateShape,
+  type ReferenceObject,
+  type Shape,
+} from '@/lib/layout-objects';
 
 export interface PortalGuest {
   id: string;
@@ -18,6 +24,17 @@ export interface PortalTable {
   name: string;
   shape: string;
   capacity: number;
+  positionX: number;
+  positionY: number;
+  rotation: number;
+  width: number | null;
+  height: number | null;
+}
+
+/** The room around the tables, for the "where is my table" map. */
+export interface PortalLayout {
+  shapes: Shape[];
+  objects: ReferenceObject[];
 }
 
 /**
@@ -37,6 +54,7 @@ export function useGuestPortal(initialSettings?: PortalSettings | null) {
 
   const [guests, setGuests] = useState<PortalGuest[]>([]);
   const [tables, setTables] = useState<PortalTable[]>([]);
+  const [layout, setLayout] = useState<PortalLayout>({ shapes: [], objects: [] });
 
   const [searchName, setSearchName] = useState('');
   const debouncedSearchName = useDebounce(searchName, 300);
@@ -90,6 +108,23 @@ export function useGuestPortal(initialSettings?: PortalSettings | null) {
         if (tableRes.ok) setTables(tableData.tables ?? []);
       } catch {
         if (!cancelled) setSearchError('We could not load the guest list. Please refresh.');
+      }
+
+      // The room is decoration: without it the map still shows every table,
+      // so a failure here is not worth troubling the guest with.
+      try {
+        const [shapeRes, objectRes] = await Promise.all([
+          fetch('/api/layout/shapes'),
+          fetch('/api/layout/reference-objects'),
+        ]);
+        const [shapeData, objectData] = await Promise.all([shapeRes.json(), objectRes.json()]);
+        if (cancelled) return;
+        setLayout({
+          shapes: shapeRes.ok && Array.isArray(shapeData) ? shapeData.map(hydrateShape) : [],
+          objects: objectRes.ok && Array.isArray(objectData) ? objectData.map(hydrateReferenceObject) : [],
+        });
+      } catch {
+        // Tables alone are enough to find a seat.
       }
     };
 
@@ -268,6 +303,8 @@ export function useGuestPortal(initialSettings?: PortalSettings | null) {
     () => ({
       settings,
       settingsLoading,
+      tables,
+      layout,
       searchName,
       suggestions,
       suggestionsCapped,
@@ -297,6 +334,8 @@ export function useGuestPortal(initialSettings?: PortalSettings | null) {
     [
       settings,
       settingsLoading,
+      tables,
+      layout,
       searchName,
       suggestions,
       suggestionsCapped,
