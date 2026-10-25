@@ -177,6 +177,11 @@ gesture works against that rather than against four different record shapes.
   data, autocomplete, table lookup, address capture.
 - `src/components/guest/PortalPanels.tsx` — header, search, result and address
   panels, styled from the template's palette. Shared by every template.
+- `src/components/guest/VenueMap.tsx` — after a lookup, the result panel draws
+  the admin's floor plan (tables, room shapes, reference objects) as an SVG
+  with the guest's table in the accent colour. Geometry is in
+  `src/lib/venue-map.ts`. Fill with `palette.canvas`, never `palette.surface`:
+  surface can be a CSS gradient, which SVG paints black.
 - `src/components/guest/templates/*` — scenery and frame only. A template may
   pass `variant="inset"` to the result and address panels to draw them inside
   its own card (the wedding does) instead of as separate boxes below it.
@@ -298,6 +303,10 @@ Preview and Production share a `DATABASE_URL`, so a preview deploy migrates the
 same database. Migrations are recorded in `drizzle.__drizzle_migrations` and
 applied once, but a preview of an unmerged schema change reaches production data
 — use `SKIP_DB_MIGRATE=1` on that deploy if it matters.
+
+`0003_wedding_guest_list` is a data migration, not a schema one: it wipes
+guests, tables and the layout layer and loads the wedding's guest sheet and the
+venue floor plan (admin users are kept). It runs once, like any migration.
 
 Belt and braces: settings reads go through `readEventSettingsRow()`, which falls
 back to the pre-migration columns so the portal degrades to template defaults

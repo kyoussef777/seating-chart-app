@@ -326,3 +326,19 @@ body {
     animation: none;
   }
 }
+
+/* ---- Guest portal floor plan ----
+   A slow ring around the guest's table on the map. Shared by every template;
+   it is the one moving thing on the map, so it draws the eye without a label. */
+@keyframes portalMapPulse {
+  0% { opacity: .9; transform: scale(.85) }
+  100% { opacity: 0; transform: scale(1.6) }
+}
+.portal-map-pulse {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: portalMapPulse 1.8s ease-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .portal-map-pulse { animation: none; opacity: .9 }
+}
