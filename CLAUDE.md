@@ -334,3 +334,17 @@ To change the color scheme, edit `/src/lib/theme.ts`:
 - Uses Neon's serverless PostgreSQL driver
 - Turbopack enabled for faster builds
 - Environment variables required for database and authentication
+
+### Dependency overrides
+
+`package.json` carries two `overrides`, both to clear `npm audit` without a
+major upgrade:
+- `next` → `postcss ^8.5.31`. Next 15 pins `postcss@8.4.31`, which has open
+  advisories; Next 16 ships 8.5, so the newer line is safe under it. Drop this
+  when moving to Next 16.
+- `@esbuild-kit/core-utils` → `esbuild ^0.25.12`. drizzle-kit still pulls this
+  deprecated loader, which wanted esbuild 0.18. Drop it once drizzle-kit no
+  longer depends on `@esbuild-kit/*`.
+
+The Excel export uses `write-excel-file`, not `xlsx`: SheetJS stopped
+publishing fixed releases to npm, so `xlsx` there is permanently flagged.
