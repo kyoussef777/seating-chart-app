@@ -89,28 +89,24 @@ export function buildDetailSheetRows(tables: Table[], unassigned: Guest[]): (str
 }
 
 /** Builds the workbook and triggers a browser download. Dynamically imports
- *  `xlsx` (~400kB) so it only loads when someone actually exports. */
+ *  `write-excel-file` so it only loads when someone actually exports. It
+ *  replaced `xlsx`, whose fixed releases are no longer published to npm; the
+ *  export only ever writes, which is all this library does. */
 export async function downloadSeatingExcel(tables: Table[], unassigned: Guest[]) {
-  const XLSX = await import('xlsx');
-  const wb = XLSX.utils.book_new();
-
-  const summaryWs = XLSX.utils.aoa_to_sheet(buildSummarySheetRows(tables, unassigned));
-  summaryWs['!cols'] = [{ wch: 18 }, { wch: 12 }, { wch: 10 }, { wch: 11 }, { wch: 11 }, { wch: 16 }];
-  XLSX.utils.book_append_sheet(wb, summaryWs, 'Summary');
-
-  const detailWs = XLSX.utils.aoa_to_sheet(buildDetailSheetRows(tables, unassigned));
-  detailWs['!cols'] = [
-    { wch: 15 },
-    { wch: 12 },
-    { wch: 10 },
-    { wch: 12 },
-    { wch: 25 },
-    { wch: 12 },
-    { wch: 15 },
-    { wch: 30 },
-  ];
-  XLSX.utils.book_append_sheet(wb, detailWs, 'Table Assignments');
+  const { default: writeExcelFile } = await import('write-excel-file/browser');
+  const width = (...chars: number[]) => chars.map((w) => ({ width: w }));
 
   const date = new Date().toISOString().split('T')[0];
-  XLSX.writeFile(wb, `seating-chart-${date}.xlsx`);
+  await writeExcelFile([
+    {
+      sheet: 'Summary',
+      data: buildSummarySheetRows(tables, unassigned),
+      columns: width(18, 12, 10, 11, 11, 16),
+    },
+    {
+      sheet: 'Table Assignments',
+      data: buildDetailSheetRows(tables, unassigned),
+      columns: width(15, 12, 10, 12, 25, 12, 15, 30),
+    },
+  ]).toFile(`seating-chart-${date}.xlsx`);
 }
